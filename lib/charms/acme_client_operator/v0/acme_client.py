@@ -21,20 +21,20 @@ from charms.acme_client_operator.v0.acme_client import AcmeClient
 from ops.main import main
 class ExampleAcmeCharm(AcmeClient):
     def __init__(self, *args):
-        super().__init__(*args)
+        super().__init__(*args, plugin="namecheap")
         self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
-    @property
-    def _domain(self) -> Optional[str]:
-        return self.model.config.get("domain")
-
-    @property
-    def _email(self) -> Optional[str]:
-        return self.model.config.get("email")
-
-    @property
-    def _plugin(self) -> str:
-        return "namecheap"
+    def _on_config_changed(self, _):
+        try:
+            self.update_generic_acme_config(
+                email="example@email.com",
+                server=self._server
+            )
+        except ValueError as e:
+            # Handle exception, for example set status
+            return
+        self.unit.status = ActiveStatus()
 
     @property
     def _plugin_config(self):

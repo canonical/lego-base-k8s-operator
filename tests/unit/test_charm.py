@@ -60,6 +60,22 @@ class TestCharm(unittest.TestCase):
                     "provides": {"certificates": {"interface": "tls-certificates"}},
                 }
             ),
+            config=yaml.safe_dump(
+                {
+                    "options": {
+                        "email": {
+                            "description": "lego-image",
+                            "type": "string",
+                            "default": "example@email.com",
+                        },
+                        "server": {
+                            "description": "lego-image",
+                            "type": "string",
+                            "default": "https://acme-v02.api.letsencrypt.org/directory",
+                        },
+                    }
+                }
+            ),
         )
 
         self.harness.set_leader(True)
@@ -72,6 +88,13 @@ class TestCharm(unittest.TestCase):
     def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_not_set_then_status_is_blocked(
         self,
     ):
+        self.harness.update_config(
+            {
+                "email": "",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
+        print(self.harness.charm.model.config)
         container = self.harness.model.unit.get_container("lego")
         self.harness.charm.on.lego_pebble_ready.emit(container)
         self.assertEqual(
@@ -81,25 +104,37 @@ class TestCharm(unittest.TestCase):
     def test_given_email_and_server_when_update_config_is_called_and_email_is_invalid_then_an_error_is_raised(
         self,
     ):
+        self.harness.update_config(
+            {
+                "email": "invalid email",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
         with self.assertRaises(ValueError):
-            self.harness.charm.update_generic_acme_config(
-                email="invalid email", server="https://acme-v02.api.letsencrypt.org/directory"
-            )
+            self.harness.charm.validate_generic_acme_config()
 
     def test_given_email_and_server_when_update_config_is_called_and_server_is_invalid_then_an_error_is_raised(
         self,
     ):
+        self.harness.update_config(
+            {
+                "email": "example@email.com",
+                "server": "invalid server",
+            }
+        )
         with self.assertRaises(ValueError):
-            self.harness.charm.update_generic_acme_config(
-                email="example@email.com", server="not a valid URL"
-            )
+            self.harness.charm.validate_generic_acme_config()
 
     def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_set_then_status_is_active(
         self,
     ):
-        self.harness.charm.update_generic_acme_config(
-            email="example@email.com", server="https://acme-v02.api.letsencrypt.org/directory"
+        self.harness.update_config(
+            {
+                "email": "example@email.com",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
         )
+        self.harness.charm.validate_generic_acme_config()
         container = self.harness.model.unit.get_container("lego")
         self.harness.charm.on.lego_pebble_ready.emit(container)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())

@@ -23,18 +23,6 @@ class AcmeTesterCharm(AcmeClient):
         super().__init__(*args)
         self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
-    @property
-    def _email(self) -> str:
-        return "example@email.com"
-
-    @property
-    def _plugin(self) -> str:
-        return "namecheap"
-
-    @property
-    def _plugin_config(self):
-        return None
-
 
 if __name__ == "__main__":  # pragma: nocover
     main(AcmeTesterCharm)

@@ -89,7 +89,6 @@ class AcmeClient(CharmBase):
     def __init__(self, *args, plugin: str):
 
         super().__init__(*args)
-        self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
         self._csr_path = "/tmp/csr.pem"
         self._certs_path = "/tmp/.lego/certificates/"
         self._container_name = list(self.meta.containers.values())[0].name
@@ -102,7 +101,6 @@ class AcmeClient(CharmBase):
             self._on_certificate_creation_request,
         )
         self._plugin = plugin
-        self._email = ""
 
     def _on_acme_client_pebble_ready(self, event):
         if not self._email:
@@ -209,7 +207,7 @@ class AcmeClient(CharmBase):
 
     def _email_is_valid(self, email: str):
         """Validate the format of the email address."""
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email) or not email:
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             return False
         return True
 
@@ -220,19 +218,22 @@ class AcmeClient(CharmBase):
             return False
         return True
 
-    def update_generic_acme_config(self, email: str, server: str):
+    def validate_generic_acme_config(self):
         """Update the generic ACME configuration.
 
-        This method can be used to set and change the values of generic configuration fields like
-        email and server from the plugin specific charms.
-
-        params:
-            email: Account email address
-            server: ACME server to use.
+        This method updates and validates generic configuration for the ACME client charm.
         """
-        if not self._email_is_valid(email):
+        if not self._email_is_valid(self._email):
             raise ValueError("Invalid email address")
-        self._email = email
-        if not self._server_is_valid(server):
+        if not self._server_is_valid(self._server):
             raise ValueError("Invalid server address")
-        self._server = server
+
+    @property
+    def _email(self) -> str:
+        """Email address to use for the ACME account."""
+        return self.model.config["email"]
+
+    @property
+    def _server(self) -> str:
+        """ACME server address."""
+        return self.model.config["server"]

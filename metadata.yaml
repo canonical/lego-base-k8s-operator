@@ -1,27 +1,16 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# For a complete list of supported options, see:
-# https://juju.is/docs/sdk/metadata-reference
-name: lego-operator
+name: acme-client-operator
 description: |
-  LEGO operator implementing the provider side of the `tls-certificates`
-  interface to get signed certificates from ACME servers, like `Let's Encrypt`.
-summary: |
-  LEGO operator implementing the provider side of the `tls-certificates`
-  interface to get signed certificates from ACME servers, like `Let's Encrypt`.
-
-provides:
-  certificates:
-    interface: tls-certificates
+    A placeholder charm that contains the acme-client charm library.
+summary: A placeholder charm that contains the acme-client charm library.
 
 containers:
-  lego:
-    resource: lego-image
+  placeholder:
+    resource: placeholder-image
 
 resources:
-  lego-image:
+  placeholder-image:
     type: oci-image
-    description: OCI image for lego (goacme/lego)
-    # Included for simplicity in integration tests
-    upstream-source: goacme/lego
+    description: OCI image for placeholder

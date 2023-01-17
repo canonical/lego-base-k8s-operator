@@ -1,0 +1,24 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+description: |
+  A dummy charm that is used to test the ACME integration.
+
+summary: |
+    A dummy charm that is used to test the ACME integration.
+
+name: acme-tester
+
+provides:
+  certificates:
+    interface: tls-certificates
+
+containers:
+  lego:
+    resource: lego-image
+
+resources:
+  lego-image:
+    type: oci-image
+    description: OCI image for lego (goacme/lego)
+    # Included for simplicity in integration tests
+    upstream-source: goacme/lego

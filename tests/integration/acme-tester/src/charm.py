@@ -20,8 +20,7 @@ class AcmeTesterCharm(AcmeClient):
 
     def __init__(self, *args):
         """Uses the Orc8rBase library to manage events."""
-        super().__init__(*args)
-        self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
+        super().__init__(*args, plugin="namecheap")
 
 
 if __name__ == "__main__":  # pragma: nocover

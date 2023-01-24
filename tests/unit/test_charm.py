@@ -18,7 +18,7 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 from ops.testing import Harness
 
-testing.SIMULATE_CAN_CONNECT = True
+testing.SIMULATE_CAN_CONNECT = True  # type: ignore[attr-defined]
 test_cert = Path(__file__).parent / "test_lego.crt"
 TLS_LIB_PATH = "charms.tls_certificates_interface.v1.tls_certificates"
 

@@ -61,7 +61,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
 )
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from ops.charm import CharmBase
+from ops.charm import CharmBase, PebbleReadyEvent
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 
@@ -73,7 +73,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,12 @@ class AcmeClient(CharmBase):
         )
         self._plugin = plugin
 
-    def _on_acme_client_pebble_ready(self, event):
+    def _on_acme_client_pebble_ready(self, event: PebbleReadyEvent) -> None:
+        """Configure Pebble layer.
+
+        Args:
+            event: PebbleReadyEvent: Juju event.
+        """
         if not self._email:
             self.unit.status = BlockedStatus("Email address was not provided.")
             event.defer()
@@ -205,20 +210,20 @@ class AcmeClient(CharmBase):
             dict[str, str]: Plugin specific configuration.
         """
 
-    def _email_is_valid(self, email: str):
+    def _email_is_valid(self, email: str) -> bool:
         """Validate the format of the email address."""
         if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             return False
         return True
 
-    def _server_is_valid(self, server: str):
+    def _server_is_valid(self, server: str) -> bool:
         """Validate the format of the ACME server address."""
         urlparts = urlparse(server)
         if not all([urlparts.scheme, urlparts.netloc]):
             return False
         return True
 
-    def validate_generic_acme_config(self):
+    def validate_generic_acme_config(self) -> None:
         """Update the generic ACME configuration.
 
         This method updates and validates generic configuration for the ACME client charm.

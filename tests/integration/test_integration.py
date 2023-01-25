@@ -21,7 +21,7 @@ TESTER_CHARM_DIR = "tests/integration/acme-tester"
 
 def copy_lib_content() -> None:
     shutil.copyfile(src=TLS_LIB_PATH, dst=f"{TESTER_CHARM_DIR}/{TLS_LIB_PATH}")
-    shutil.copyfile(src=TESTER_CHARM_DIR, dst=f"{TESTER_CHARM_DIR}/{ACME_CLIENT_LIB_PATH}")
+    shutil.copyfile(src=ACME_CLIENT_LIB_PATH, dst=f"{TESTER_CHARM_DIR}/{ACME_CLIENT_LIB_PATH}")
 
 
 @pytest.mark.abort_on_fail

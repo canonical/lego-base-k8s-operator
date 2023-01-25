@@ -4,7 +4,7 @@
 """# acme_client Library.
 
 This library is designed to enable developers to easily create new charms for the ACME protocol.
-This library contains all the logic necessary to get certificates from an ACME server..
+This library contains all the logic necessary to get certificates from an ACME server.
 
 ## Getting Started
 To get started using the library, you need to fetch the library using `charmcraft`.
@@ -27,10 +27,7 @@ class ExampleAcmeCharm(AcmeClient):
 
     def _on_config_changed(self, _):
         try:
-            self.update_generic_acme_config(
-                email="example@email.com",
-                server=self._server
-            )
+            self.validate_generic_acme_config()
         except ValueError as e:
             # Handle exception, for example set status
             return

@@ -6,7 +6,7 @@ description: |
 summary: |
     A dummy charm that is used to test the ACME integration.
 
-name: acme-tester
+name: acme-operator
 
 provides:
   certificates:
@@ -20,5 +20,4 @@ resources:
   lego-image:
     type: oci-image
     description: OCI image for lego (goacme/lego)
-    # Included for simplicity in integration tests
     upstream-source: goacme/lego

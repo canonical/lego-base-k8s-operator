@@ -12,16 +12,16 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("tests/integration/acme-tester/metadata.yaml").read_text())
+METADATA = yaml.safe_load(Path("tests/integration/acme-operator/metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 TLS_LIB_PATH = "lib/charms/tls_certificates_interface/v1/tls_certificates.py"
 ACME_CLIENT_LIB_PATH = "lib/charms/acme_client_operator/v0/acme_client.py"
-TESTER_CHARM_DIR = "tests/integration/acme-tester"
+ACME_OPERATOR_DIR = "tests/integration/acme-operator"
 
 
 def copy_lib_content() -> None:
-    shutil.copyfile(src=TLS_LIB_PATH, dst=f"{TESTER_CHARM_DIR}/{TLS_LIB_PATH}")
-    shutil.copyfile(src=ACME_CLIENT_LIB_PATH, dst=f"{TESTER_CHARM_DIR}/{ACME_CLIENT_LIB_PATH}")
+    shutil.copyfile(src=TLS_LIB_PATH, dst=f"{ACME_OPERATOR_DIR}/{TLS_LIB_PATH}")
+    shutil.copyfile(src=ACME_CLIENT_LIB_PATH, dst=f"{ACME_OPERATOR_DIR}/{ACME_CLIENT_LIB_PATH}")
 
 
 @pytest.mark.abort_on_fail
@@ -31,18 +31,22 @@ async def test_build_and_deploy(ops_test):
     Assert on the unit status before any relations/configurations take place.
     """
     copy_lib_content()
-    charm = await ops_test.build_charm("tests/integration/acme-tester")
-    resources = {"lego-image": METADATA["resources"]["lego-image"]["upstream-source"]}
+    charm = await ops_test.build_charm("tests/integration/acme-operator")
     await ops_test.model.deploy(
-        charm, resources=resources, application_name=APP_NAME, series="focal"
+        entity_url=charm,
+        resources={"lego-image": METADATA["resources"]["lego-image"]["upstream-source"]},
+        application_name=APP_NAME,
+        config={
+            "email": "example@gmail.com",
+            "server": "https://acme-staging-v02.api.letsencrypt.org/directory",
+        },
+        series="focal",
     )
 
-    # issuing dummy update_status just to trigger an event
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=1000,
-        )
-        assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        raise_on_blocked=True,
+        timeout=1000,
+    )
+    assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"

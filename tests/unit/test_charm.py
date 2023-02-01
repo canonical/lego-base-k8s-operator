@@ -14,7 +14,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
     generate_private_key,
 )
 from ops import testing
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 from ops.testing import Harness
 
@@ -78,27 +78,8 @@ class TestCharm(unittest.TestCase):
             ),
         )
 
-        self.harness.set_leader(True)
-        self.harness.set_can_connect("lego", True)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
-        self.r_id = self.harness.add_relation("certificates", "remote")
-        self.harness.add_relation_unit(self.r_id, "remote/0")
-
-    def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_not_set_then_status_is_blocked(  # noqa: E501
-        self,
-    ):
-        self.harness.update_config(
-            {
-                "email": "",
-                "server": "https://acme-v02.api.letsencrypt.org/directory",
-            }
-        )
-        container = self.harness.model.unit.get_container("lego")
-        self.harness.charm.on.lego_pebble_ready.emit(container)
-        self.assertEqual(
-            self.harness.model.unit.status, BlockedStatus("Email address was not provided.")
-        )
 
     def test_given_email_and_server_when_update_config_is_called_and_email_is_invalid_then_status_is_blocked(  # noqa: E501
         self,
@@ -120,7 +101,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config(
             {
                 "email": "example@email.com",
-                "server": "invalid server",
+                "server": "Invalid ACME server",
             }
         )
 
@@ -129,20 +110,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.model.unit.status, BlockedStatus("Invalid ACME server"))
         self.assertEqual(return_value, False)
 
-    def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_set_then_status_is_active(  # noqa: E501
-        self,
-    ):
-        self.harness.update_config(
-            {
-                "email": "example@email.com",
-                "server": "https://acme-v02.api.letsencrypt.org/directory",
-            }
-        )
-        self.harness.charm.validate_generic_acme_config()
-        container = self.harness.model.unit.get_container("lego")
-        self.harness.charm.on.lego_pebble_ready.emit(container)
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
-
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV1.set_relation_certificate",
@@ -150,11 +117,15 @@ class TestCharm(unittest.TestCase):
     def test_given_cmd_when_certificate_creation_request_then_certificate_is_set_in_relation(
         self, mock_set_relation_certificate
     ):
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("certificates", "remote")
+        self.harness.add_relation_unit(relation_id, "remote/0")
+        self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
             "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
         )
-        csr = self.add_csr_to_remote_unit_relation_data()
+        csr = self.add_csr_to_remote_unit_relation_data(relation_id, app_or_unit="remote/0")
         with open(test_cert, "r") as file:
             expected_certs = (file.read()).split("\n\n")
         mock_set_relation_certificate.assert_called_with(
@@ -162,20 +133,24 @@ class TestCharm(unittest.TestCase):
             certificate_signing_request=csr,
             ca=expected_certs[-1],
             chain=list(reversed(expected_certs)),
-            relation_id=self.r_id,
+            relation_id=relation_id,
         )
 
     @patch("ops.model.Container.exec", new_callable=Mock)
     def test_given_command_execution_fails_when_certificate_creation_request_then_request_fails_and_status_is_blocked(  # noqa: E501
         self, patch_exec
     ):
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("certificates", "remote")
+        self.harness.add_relation_unit(relation_id, "remote/0")
+        self.harness.set_can_connect("lego", True)
         patch_exec.return_value = MockExec(raise_exec_error=True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
             "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
         )
 
-        self.add_csr_to_remote_unit_relation_data()
+        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
         assert self.harness.charm.unit.status == BlockedStatus(
             "Error getting certificate. Check logs for details"
         )
@@ -183,20 +158,23 @@ class TestCharm(unittest.TestCase):
     def test_given_cannot_connect_to_container_when_certificate_creation_request_then_request_fails_and_status_is_waiting(  # noqa: E501
         self,
     ):
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("certificates", "remote")
+        self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", False)
-        self.add_csr_to_remote_unit_relation_data()
+        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
         assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
 
-    def add_csr_to_remote_unit_relation_data(self) -> str:
+    def add_csr_to_remote_unit_relation_data(self, relation_id: int, app_or_unit: str) -> str:
         """Add a CSR to the remote unit relation data.
 
         Returns: The CSR as a string.
         """
         csr = generate_csr(generate_private_key(), subject="foo")
         self.harness.update_relation_data(
-            self.r_id,
-            "remote/0",
-            {
+            relation_id=relation_id,
+            app_or_unit=app_or_unit,
+            key_values={
                 "certificate_signing_requests": json.dumps(
                     [{"certificate_signing_request": csr.decode().strip()}]
                 )

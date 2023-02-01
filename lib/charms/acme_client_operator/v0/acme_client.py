@@ -26,10 +26,9 @@ class ExampleAcmeCharm(AcmeClient):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     def _on_config_changed(self, _):
-        try:
-            self.validate_generic_acme_config()
-        except ValueError as e:
-            # Handle exception, for example set status
+        if not self._validate_registrar_config():
+            return
+        if not self.validate_generic_acme_config():
             return
         self.unit.status = ActiveStatus()
 
@@ -58,8 +57,8 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
 )
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from ops.charm import CharmBase, PebbleReadyEvent
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.charm import CharmBase
+from ops.model import BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 
 # The unique Charmhub library identifier, never change it
@@ -88,50 +87,37 @@ class AcmeClient(CharmBase):
         self._csr_path = "/tmp/csr.pem"
         self._certs_path = "/tmp/.lego/certificates/"
         self._container_name = list(self.meta.containers.values())[0].name
-        container_name_with_underscores = self._container_name.replace("-", "_")
         self.tls_certificates = TLSCertificatesProvidesV1(self, "certificates")
-        pebble_ready_event = getattr(self.on, f"{container_name_with_underscores}_pebble_ready")
-        self.framework.observe(pebble_ready_event, self._on_acme_client_pebble_ready)
         self.framework.observe(
             self.tls_certificates.on.certificate_creation_request,
             self._on_certificate_creation_request,
         )
         self._plugin = plugin
 
-    def _on_acme_client_pebble_ready(self, event: PebbleReadyEvent) -> None:
-        """Configure Pebble layer.
-
-        Args:
-            event: PebbleReadyEvent: Juju event.
-        """
+    def validate_generic_acme_config(self) -> bool:
+        """Validates generic ACME config."""
         if not self._email:
-            self.unit.status = BlockedStatus("Email address was not provided.")
-            event.defer()
-            return
+            self.unit.status = BlockedStatus("Email address was not provided")
+            return False
         if not self._server:
-            self.unit.status = BlockedStatus("Server address was not provided.")
-            event.defer()
-            return
+            self.unit.status = BlockedStatus("Server address was not provided")
+            return False
         if not self._email_is_valid(self._email):
-            self.unit.status = BlockedStatus("Invalid email address.")
-            event.defer()
-            return
+            self.unit.status = BlockedStatus("Invalid email address")
+            return False
         if not self._server_is_valid(self._server):
-            self.unit.status = BlockedStatus("Invalid server address.")
-            event.defer()
-            return
-        self.unit.status = ActiveStatus()
+            self.unit.status = BlockedStatus("Invalid ACME server")
+            return False
+        return True
 
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
         _container = self.unit.get_container(self._container_name)
         if not self.unit.is_leader():
             return
-
         if not _container.can_connect():
             self.unit.status = WaitingStatus("Waiting for container to be ready")
             event.defer()
             return
-
         try:
             csr = x509.load_pem_x509_csr(event.certificate_signing_request.encode())
             subject_value = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
@@ -218,20 +204,6 @@ class AcmeClient(CharmBase):
         """Validate the format of the ACME server address."""
         urlparts = urlparse(server)
         if not all([urlparts.scheme, urlparts.netloc]):
-            return False
-        return True
-
-    def validate_generic_acme_config(self) -> bool:
-        """Validates the generic ACME configuration.
-
-        This method validates the generic configuration for the ACME client charm and blocks
-        if is invalid.
-        """
-        if not self._email_is_valid(self._email):
-            self.unit.status = BlockedStatus("Invalid email address")
-            return False
-        if not self._server_is_valid(self._server):
-            self.unit.status = BlockedStatus("Invalid ACME server")
             return False
         return True
 

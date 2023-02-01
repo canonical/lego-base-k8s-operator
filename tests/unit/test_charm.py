@@ -14,7 +14,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
     generate_private_key,
 )
 from ops import testing
-from ops.model import BlockedStatus, ErrorStatus, WaitingStatus
+from ops.model import BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 from ops.testing import Harness
 
@@ -200,7 +200,7 @@ class TestCharm(unittest.TestCase):
 
         self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
-        assert self.harness.charm.unit.status == ErrorStatus(
+        assert self.harness.charm.unit.status == BlockedStatus(
             "Workload command execution failed, use `juju debug-log` for more information."
         )
 

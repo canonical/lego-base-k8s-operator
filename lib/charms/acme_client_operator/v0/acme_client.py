@@ -58,7 +58,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from ops.charm import CharmBase
-from ops.model import BlockedStatus, ErrorStatus, WaitingStatus
+from ops.model import BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 
 # The unique Charmhub library identifier, never change it
@@ -167,7 +167,7 @@ class AcmeClient(CharmBase):
         logger.info("Received Certificate Creation Request for domain %s", csr_subject)
         self._push_csr_to_workload(event.certificate_signing_request)
         if not self._execute_lego_cmd():
-            self.unit.status = ErrorStatus(
+            self.unit.status = BlockedStatus(
                 "Workload command execution failed, use `juju debug-log` for more information."
             )
             return

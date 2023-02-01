@@ -70,7 +70,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,6 @@ class AcmeClient(CharmBase):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, *args, plugin: str):
-
         super().__init__(*args)
         self._csr_path = "/tmp/csr.pem"
         self._certs_path = "/tmp/.lego/certificates/"
@@ -207,28 +206,34 @@ class AcmeClient(CharmBase):
             dict[str, str]: Plugin specific configuration.
         """
 
-    def _email_is_valid(self, email: str) -> bool:
+    @staticmethod
+    def _email_is_valid(email: str) -> bool:
         """Validate the format of the email address."""
         if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             return False
         return True
 
-    def _server_is_valid(self, server: str) -> bool:
+    @staticmethod
+    def _server_is_valid(server: str) -> bool:
         """Validate the format of the ACME server address."""
         urlparts = urlparse(server)
         if not all([urlparts.scheme, urlparts.netloc]):
             return False
         return True
 
-    def validate_generic_acme_config(self) -> None:
-        """Update the generic ACME configuration.
+    def validate_generic_acme_config(self) -> bool:
+        """Validates the generic ACME configuration.
 
-        This method updates and validates generic configuration for the ACME client charm.
+        This method validates the generic configuration for the ACME client charm and blocks
+        if is invalid.
         """
         if not self._email_is_valid(self._email):
-            raise ValueError("Invalid email address")
+            self.unit.status = BlockedStatus("Invalid email address")
+            return False
         if not self._server_is_valid(self._server):
-            raise ValueError("Invalid server address")
+            self.unit.status = BlockedStatus("Invalid ACME server")
+            return False
+        return True
 
     @property
     def _email(self) -> str:

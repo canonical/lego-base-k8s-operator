@@ -85,7 +85,7 @@ class TestCharm(unittest.TestCase):
         self.r_id = self.harness.add_relation("certificates", "remote")
         self.harness.add_relation_unit(self.r_id, "remote/0")
 
-    def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_not_set_then_status_is_blocked(
+    def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_not_set_then_status_is_blocked(  # noqa: E501
         self,
     ):
         self.harness.update_config(
@@ -94,14 +94,13 @@ class TestCharm(unittest.TestCase):
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
             }
         )
-        print(self.harness.charm.model.config)
         container = self.harness.model.unit.get_container("lego")
         self.harness.charm.on.lego_pebble_ready.emit(container)
         self.assertEqual(
             self.harness.model.unit.status, BlockedStatus("Email address was not provided.")
         )
 
-    def test_given_email_and_server_when_update_config_is_called_and_email_is_invalid_then_an_error_is_raised(
+    def test_given_email_and_server_when_update_config_is_called_and_email_is_invalid_then_status_is_blocked(  # noqa: E501
         self,
     ):
         self.harness.update_config(
@@ -110,10 +109,12 @@ class TestCharm(unittest.TestCase):
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
             }
         )
-        with self.assertRaises(ValueError):
-            self.harness.charm.validate_generic_acme_config()
+        return_value = self.harness.charm.validate_generic_acme_config()
 
-    def test_given_email_and_server_when_update_config_is_called_and_server_is_invalid_then_an_error_is_raised(
+        self.assertEqual(self.harness.model.unit.status, BlockedStatus("Invalid email address"))
+        self.assertEqual(return_value, False)
+
+    def test_given_email_and_server_when_update_config_is_called_and_server_is_invalid_then_an_error_is_raised(  # noqa: E501
         self,
     ):
         self.harness.update_config(
@@ -122,10 +123,13 @@ class TestCharm(unittest.TestCase):
                 "server": "invalid server",
             }
         )
-        with self.assertRaises(ValueError):
-            self.harness.charm.validate_generic_acme_config()
 
-    def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_set_then_status_is_active(
+        return_value = self.harness.charm.validate_generic_acme_config()
+
+        self.assertEqual(self.harness.model.unit.status, BlockedStatus("Invalid ACME server"))
+        self.assertEqual(return_value, False)
+
+    def test_given_empty_pebble_plan_when_pebble_ready_and_generic_config_is_set_then_status_is_active(  # noqa: E501
         self,
     ):
         self.harness.update_config(
@@ -160,10 +164,9 @@ class TestCharm(unittest.TestCase):
             chain=list(reversed(expected_certs)),
             relation_id=self.r_id,
         )
-        print(self.harness.charm.unit.status)
 
     @patch("ops.model.Container.exec", new_callable=Mock)
-    def test_given_command_execution_fails_when_certificate_creation_request_then_request_fails_and_status_is_blocked(
+    def test_given_command_execution_fails_when_certificate_creation_request_then_request_fails_and_status_is_blocked(  # noqa: E501
         self, patch_exec
     ):
         patch_exec.return_value = MockExec(raise_exec_error=True)

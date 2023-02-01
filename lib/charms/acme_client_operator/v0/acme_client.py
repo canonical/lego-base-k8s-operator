@@ -58,7 +58,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from ops.charm import CharmBase
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import BlockedStatus, ErrorStatus, WaitingStatus
 from ops.pebble import ExecError
 
 # The unique Charmhub library identifier, never change it
@@ -125,7 +125,7 @@ class AcmeClient(CharmBase):
         """Pushes CSR to workload container."""
         self._container.push(path=self._csr_path, make_dirs=True, source=csr.encode())
 
-    def _execute_lego_cmd(self) -> None:
+    def _execute_lego_cmd(self) -> bool:
         """Executes lego command in workload container."""
         process = self._container.exec(
             self._cmd, timeout=300, working_dir="/tmp", environment=self._plugin_config
@@ -134,21 +134,26 @@ class AcmeClient(CharmBase):
             stdout, error = process.wait_output()
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
-            self.unit.status = BlockedStatus("Error getting certificate. Check logs for details")
             logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():  # type: ignore
                 logger.error("    %s", line)
-            return
+            return False
+        return True
 
     def _pull_certificates_from_workload(self, csr_subject: str) -> List[Union[bytes, str]]:
         """Pulls certificates from workload container."""
         chain_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.crt")
-        certs = []
-        for cert in chain_pem.read().split("\n\n"):  # type: ignore[arg-type]
-            certs.append(cert)
-        return certs
+        return [cert for cert in chain_pem.read().split("\n\n")]  # type: ignore[arg-type]
 
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
+        """Handles certificate creation request event.
+
+        - Retrieves subject from CSR
+        - Pushes CSR to workload container
+        - Executes lego command in workload
+        - Pulls certificates from workload
+        - Sends certificates to requesting charm
+        """
         if not self.validate_generic_acme_config():
             event.defer()
             return
@@ -161,7 +166,11 @@ class AcmeClient(CharmBase):
         csr_subject = self._get_subject_from_csr(event.certificate_signing_request)
         logger.info("Received Certificate Creation Request for domain %s", csr_subject)
         self._push_csr_to_workload(event.certificate_signing_request)
-        self._execute_lego_cmd()
+        if not self._execute_lego_cmd():
+            self.unit.status = ErrorStatus(
+                "Workload command execution failed, use `juju debug-log` for more information."
+            )
+            return
         signed_certificates = self._pull_certificates_from_workload(csr_subject)
         self.tls_certificates.set_relation_certificate(
             certificate=signed_certificates[0],

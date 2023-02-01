@@ -48,7 +48,7 @@ import abc
 import logging
 import re
 from abc import abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
 from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ignore[import]
@@ -87,6 +87,7 @@ class AcmeClient(CharmBase):
         self._csr_path = "/tmp/csr.pem"
         self._certs_path = "/tmp/.lego/certificates/"
         self._container_name = list(self.meta.containers.values())[0].name
+        self._container = self.unit.get_container(self._container_name)
         self.tls_certificates = TLSCertificatesProvidesV1(self, "certificates")
         self.framework.observe(
             self.tls_certificates.on.certificate_creation_request,
@@ -100,7 +101,7 @@ class AcmeClient(CharmBase):
             self.unit.status = BlockedStatus("Email address was not provided")
             return False
         if not self._server:
-            self.unit.status = BlockedStatus("Server address was not provided")
+            self.unit.status = BlockedStatus("ACME server was not provided")
             return False
         if not self._email_is_valid(self._email):
             self.unit.status = BlockedStatus("Invalid email address")
@@ -110,31 +111,23 @@ class AcmeClient(CharmBase):
             return False
         return True
 
-    def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
-        _container = self.unit.get_container(self._container_name)
-        if not self.unit.is_leader():
-            return
-        if not _container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
-            event.defer()
-            return
-        try:
-            csr = x509.load_pem_x509_csr(event.certificate_signing_request.encode())
-            subject_value = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-            if isinstance(subject_value, bytes):
-                subject = subject_value.decode()
-            else:
-                subject = subject_value
-        except Exception:
-            logger.exception("Bad CSR received, aborting")
-            return
+    @staticmethod
+    def _get_subject_from_csr(certificate_signing_request: str) -> str:
+        """Returns subject from a provided CSR."""
+        csr = x509.load_pem_x509_csr(certificate_signing_request.encode())
+        subject_value = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+        if isinstance(subject_value, bytes):
+            return subject_value.decode()
+        else:
+            return subject_value
 
-        _container.push(
-            path=self._csr_path, make_dirs=True, source=event.certificate_signing_request.encode()
-        )
+    def _push_csr_to_workload(self, csr: str) -> None:
+        """Pushes CSR to workload container."""
+        self._container.push(path=self._csr_path, make_dirs=True, source=csr.encode())
 
-        logger.info("Received Certificate Creation Request for domain %s", subject)
-        process = _container.exec(
+    def _execute_lego_cmd(self) -> None:
+        """Executes lego command in workload container."""
+        process = self._container.exec(
             self._cmd, timeout=300, working_dir="/tmp", environment=self._plugin_config
         )
         try:
@@ -147,15 +140,34 @@ class AcmeClient(CharmBase):
                 logger.error("    %s", line)
             return
 
-        chain_pem = _container.pull(path=f"{self._certs_path}{subject}.crt")
+    def _pull_certificates_from_workload(self, csr_subject: str) -> List[Union[bytes, str]]:
+        """Pulls certificates from workload container."""
+        chain_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.crt")
         certs = []
         for cert in chain_pem.read().split("\n\n"):  # type: ignore[arg-type]
             certs.append(cert)
+        return certs
+
+    def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
+        if not self.validate_generic_acme_config():
+            event.defer()
+            return
+        if not self.unit.is_leader():
+            return
+        if not self._container.can_connect():
+            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            event.defer()
+            return
+        csr_subject = self._get_subject_from_csr(event.certificate_signing_request)
+        logger.info("Received Certificate Creation Request for domain %s", csr_subject)
+        self._push_csr_to_workload(event.certificate_signing_request)
+        self._execute_lego_cmd()
+        signed_certificates = self._pull_certificates_from_workload(csr_subject)
         self.tls_certificates.set_relation_certificate(
-            certificate=certs[0],
+            certificate=signed_certificates[0],
             certificate_signing_request=event.certificate_signing_request,
-            ca=certs[-1],
-            chain=list(reversed(certs)),
+            ca=signed_certificates[-1],
+            chain=list(reversed(signed_certificates)),
             relation_id=event.relation_id,
         )
 
@@ -166,6 +178,10 @@ class AcmeClient(CharmBase):
         Returns:
             list[str]: Command and args to run.
         """
+        if not self._email:
+            raise ValueError("Email address was not provided")
+        if not self._server:
+            raise ValueError("ACME server was not provided")
         return [
             "lego",
             "--email",
@@ -208,11 +224,11 @@ class AcmeClient(CharmBase):
         return True
 
     @property
-    def _email(self) -> str:
+    def _email(self) -> Optional[str]:
         """Email address to use for the ACME account."""
-        return self.model.config["email"]
+        return self.model.config.get("email", None)
 
     @property
-    def _server(self) -> str:
+    def _server(self) -> Optional[str]:
         """ACME server address."""
-        return self.model.config["server"]
+        return self.model.config.get("server", None)

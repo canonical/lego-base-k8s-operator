@@ -5,14 +5,8 @@
 """Dummy charm for integration testing."""
 
 
-import logging
-
 from charms.acme_client_operator.v0.acme_client import AcmeClient  # type: ignore[import]
 from ops.main import main
-
-logger = logging.getLogger(__name__)
-
-VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
 
 
 class AcmeTesterCharm(AcmeClient):

@@ -58,7 +58,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from ops.charm import CharmBase
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ExecError
 
 # The unique Charmhub library identifier, never change it
@@ -155,6 +155,7 @@ class AcmeClient(CharmBase):
         - Sends certificates to requesting charm
         """
         if not self.validate_generic_acme_config():
+            self.unit.status = BlockedStatus("Invalid ACME configuration")
             event.defer()
             return
         if not self.unit.is_leader():
@@ -164,8 +165,14 @@ class AcmeClient(CharmBase):
             event.defer()
             return
         csr_subject = self._get_subject_from_csr(event.certificate_signing_request)
+        if len(csr_subject) > 64:
+            self.unit.status = BlockedStatus(
+                f"Subject is too long (> 64 characters): {csr_subject}"
+            )
+            return
         logger.info("Received Certificate Creation Request for domain %s", csr_subject)
         self._push_csr_to_workload(event.certificate_signing_request)
+        self.unit.status = MaintenanceStatus("Executing lego command")
         if not self._execute_lego_cmd():
             self.unit.status = BlockedStatus(
                 "Workload command execution failed, use `juju debug-log` for more information."
@@ -179,6 +186,7 @@ class AcmeClient(CharmBase):
             chain=list(reversed(signed_certificates)),
             relation_id=event.relation_id,
         )
+        self.unit.status = ActiveStatus()
 
     @property
     def _cmd(self) -> List[str]:

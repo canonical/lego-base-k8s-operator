@@ -2,8 +2,8 @@ name: Upload acme-client-operator
 
 on:
   push:
-    branches:
-      - "main"
+#    branches:
+#      - "main"
 
 jobs:
   charmhub-upload:

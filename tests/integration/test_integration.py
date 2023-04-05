@@ -40,7 +40,7 @@ async def test_build_and_deploy(ops_test):
             "email": "example@gmail.com",
             "server": "https://acme-staging-v02.api.letsencrypt.org/directory",
         },
-        series="focal",
+        series="jammy",
     )
 
     await ops_test.model.wait_for_idle(

@@ -38,7 +38,7 @@ class MockExec:
 
 class AcmeTestCharm(AcmeClient):
     def __init__(self, *args):
-        """Uses the Orc8rBase library to manage events."""
+        """Uses the AcmeClient library to manage events."""
         super().__init__(*args, plugin="namecheap")
         self.valid_config = True
 

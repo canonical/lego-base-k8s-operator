@@ -34,8 +34,23 @@ class ExampleAcmeCharm(AcmeClient):
 
     @property
     def _plugin_config(self):
-        return None
+        return {}
 ```
+
+Charms using this library are expected to:
+- Inherit from AcmeClient
+- Call `super().__init__(*args, plugin="")` with the lego plugin name
+- Observe `ConfigChanged` to a method called `_on_config_changed`
+- `_on_config_changed` must follow those requirements:
+  - Validate its specific configuration, blocking if invalid
+  - Validate generic configuration, by calling `self.validate_generic_acme_config()`,
+    returning immediately when it returns `False`
+  - Sets the status to Active
+  - Accept any kind of events
+- Implement the `_plugin_config` property, returning a dictionary of its specific
+  configuration. Keys must be capitalized and follow the plugins documentation from
+  lego.
+
 Charms that leverage this library also need to specify a `provides` relation in their
 `metadata.yaml` file. For example:
 ```yaml
@@ -58,6 +73,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from ops.charm import CharmBase
+from ops.framework import EventBase
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.pebble import ExecError
 
@@ -69,7 +85,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +126,26 @@ class AcmeClient(CharmBase):
             self.unit.status = BlockedStatus("Invalid ACME server")
             return False
         return True
+
+    @abstractmethod
+    def _on_config_changed(self, event: EventBase) -> None:
+        """Validate configuration and sets status accordingly.
+
+        Implementations need to follow the following steps:
+
+        1. Validate their specific configuration, setting the status
+           to `Blocked` if invalid and returning immediately.
+        2. Validate generic configuration by calling
+           `self.validate_generic_acme_config()`, returning immediately
+           if it returns `False`.
+        3. Set the status to `Active` and return.
+
+        Args:
+            event (EventBase): Any Juju event
+
+        Returns:
+            None
+        """
 
     @staticmethod
     def _get_subject_from_csr(certificate_signing_request: str) -> str:
@@ -154,8 +190,8 @@ class AcmeClient(CharmBase):
         - Pulls certificates from workload
         - Sends certificates to requesting charm
         """
-        if not self.validate_generic_acme_config():
-            self.unit.status = BlockedStatus("Invalid ACME configuration")
+        self._on_config_changed(event)
+        if not isinstance(self.unit.status, ActiveStatus):
             event.defer()
             return
         if not self.unit.is_leader():

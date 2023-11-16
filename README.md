@@ -1,11 +1,9 @@
-# acme-client-operator
-
-## Description
+# ACME Client Operator (K8s)
+[![CharmHub Badge](https://charmhub.io/acme-client-operator/badge.svg)](https://charmhub.io/acme-client-operator)
 
 ACME Client Operator is a placeholder charm that contains the `acme_client` library.
 The library contains a base charm implements the provider side of the `tls-certificates-interface`
-to provide signed certificates from an ACME servers, using LEGO
-(https://go-acme.github.io/lego).
+to provide signed certificates from an ACME servers, using [LEGO](https://go-acme.github.io/lego).
 It should be used as a base for charms that need to provide TLS certificates.
 
 ## Usage

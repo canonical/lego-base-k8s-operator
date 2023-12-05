@@ -1,4 +1,4 @@
-name: Upload acme-client-operator
+name: Upload lego-client-operator
 
 on:
   push:

@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""# acme_client Library.
+"""# lego_client Library.
 
 This library is designed to enable developers to easily create new charms for the ACME protocol.
 This library contains all the logic necessary to get certificates from an ACME server.
@@ -9,7 +9,7 @@ This library contains all the logic necessary to get certificates from an ACME s
 ## Getting Started
 To get started using the library, you need to fetch the library using `charmcraft`.
 ```shell
-charmcraft fetch-lib charms.acme_client_operator.v0.acme_client
+charmcraft fetch-lib charms.lego_client_operator.v0.lego_client
 ```
 You will also need to add the following library to the charm's `requirements.txt` file:
 - jsonschema
@@ -17,7 +17,7 @@ You will also need to add the following library to the charm's `requirements.txt
 
 Then, to use the library in an example charm, you can do the following:
 ```python
-from charms.acme_client_operator.v0.acme_client import AcmeClient
+from charms.lego_client_operator.v0.lego_client import AcmeClient
 from ops.main import main
 class ExampleAcmeCharm(AcmeClient):
     def __init__(self, *args):

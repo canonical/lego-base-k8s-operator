@@ -3,14 +3,14 @@
 # See LICENSE file for licensing details.
 
 
-"""A placeholder charm for the acme_client lib."""
+"""A placeholder charm for the lego_client lib."""
 
 from ops.charm import CharmBase
 from ops.main import main
 
 
 class LegoClientLibCharm(CharmBase):
-    """Placeholder charm for acme_client lib."""
+    """Placeholder charm for lego_client lib."""
 
     pass
 

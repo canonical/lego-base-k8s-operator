@@ -6,7 +6,7 @@ description: |
 summary: |
     A dummy charm that is used to test the ACME integration.
 
-name: acme-operator
+name: lego-operator
 
 provides:
   certificates:

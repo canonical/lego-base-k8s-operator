@@ -12,16 +12,16 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("tests/integration/acme-operator/metadata.yaml").read_text())
+METADATA = yaml.safe_load(Path("tests/integration/lego-operator/metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 TLS_LIB_PATH = "lib/charms/tls_certificates_interface/v1/tls_certificates.py"
-ACME_CLIENT_LIB_PATH = "lib/charms/acme_client_operator/v0/acme_client.py"
-ACME_OPERATOR_DIR = "tests/integration/acme-operator"
+LEGO_CLIENT_LIB_PATH = "lib/charms/lego_base_k8s/v0/lego_client.py"
+LEGO_OPERATOR_DIR = "tests/integration/lego-operator"
 
 
 def copy_lib_content() -> None:
-    shutil.copyfile(src=TLS_LIB_PATH, dst=f"{ACME_OPERATOR_DIR}/{TLS_LIB_PATH}")
-    shutil.copyfile(src=ACME_CLIENT_LIB_PATH, dst=f"{ACME_OPERATOR_DIR}/{ACME_CLIENT_LIB_PATH}")
+    shutil.copyfile(src=TLS_LIB_PATH, dst=f"{LEGO_OPERATOR_DIR}/{TLS_LIB_PATH}")
+    shutil.copyfile(src=LEGO_CLIENT_LIB_PATH, dst=f"{LEGO_OPERATOR_DIR}/{LEGO_CLIENT_LIB_PATH}")
 
 
 @pytest.mark.abort_on_fail
@@ -31,7 +31,7 @@ async def test_build_and_deploy(ops_test):
     Assert on the unit status before any relations/configurations take place.
     """
     copy_lib_content()
-    charm = await ops_test.build_charm("tests/integration/acme-operator")
+    charm = await ops_test.build_charm("tests/integration/lego-operator")
     await ops_test.model.deploy(
         entity_url=charm,
         resources={"lego-image": METADATA["resources"]["lego-image"]["upstream-source"]},

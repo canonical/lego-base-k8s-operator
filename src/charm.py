@@ -9,11 +9,11 @@ from ops.charm import CharmBase
 from ops.main import main
 
 
-class AcmeClientLibCharm(CharmBase):
+class LegoClientLibCharm(CharmBase):
     """Placeholder charm for acme_client lib."""
 
     pass
 
 
 if __name__ == "__main__":
-    main(AcmeClientLibCharm)
+    main(LegoClientLibCharm)

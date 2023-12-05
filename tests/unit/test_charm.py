@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import yaml
-from charms.acme_client_operator.v0.acme_client import AcmeClient  # type: ignore[import]
+from charms.lego_base_k8s.v0.lego_client import AcmeClient  # type: ignore[import]
 from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ignore[import]
     generate_csr,
     generate_private_key,

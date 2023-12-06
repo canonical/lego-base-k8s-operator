@@ -1,4 +1,4 @@
-name: Upload lego-client-operator
+name: Upload lego-base-k8s
 
 on:
   push:

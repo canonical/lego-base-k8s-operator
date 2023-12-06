@@ -1,4 +1,4 @@
-name: Upload acme-client-operator
+name: Upload lego-base-k8s
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
         env:
           CHARMCRAFT_AUTH: "${{ secrets.CHARMCRAFT_AUTH }}"
         run: |
-          charmcraft publish-lib charms.acme_client_operator.v0.acme_client
+          charmcraft publish-lib charms.lego_base_k8s.v0.lego_client
 
       - name: Chmod charmcraft logs
         if: ${{ failure() && steps.publish.conclusion == 'failure' }}

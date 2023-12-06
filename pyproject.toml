@@ -40,7 +40,7 @@ copyright-author = "Canonical Ltd."
 copyright-regexp = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+%(author)s"
 
 [tool.mypy]
-exclude = ["integration/acme-operator/*"]
+exclude = ["integration/lego-operator/*"]
 
 [[tool.mypy.overrides]]
 module = ["charms.*"]

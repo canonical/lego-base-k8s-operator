@@ -1,16 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: acme-client-operator
+name: lego-base-k8s
 description: |
-    A placeholder charm that contains the acme-client charm library.
-summary: A placeholder charm that contains the acme-client charm library.
-
-containers:
-  placeholder:
-    resource: placeholder-image
-
-resources:
-  placeholder-image:
-    type: oci-image
-    description: OCI image for placeholder
+    A placeholder charm that contains the lego-client charm library.
+summary: A placeholder charm that contains the lego-client charm library.

@@ -5,12 +5,12 @@
 """Dummy charm for integration testing."""
 
 
-from charms.acme_client_operator.v0.acme_client import AcmeClient  # type: ignore[import]
+from charms.lego_base_k8s.v0.lego_client import AcmeClient  # type: ignore[import]
 from ops.main import main
 from ops.model import ActiveStatus
 
 
-class AcmeOperator(AcmeClient):
+class LegoOperator(AcmeClient):
     """Dummy charm for integration testing."""
 
     def __init__(self, *args):
@@ -30,4 +30,4 @@ class AcmeOperator(AcmeClient):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    main(AcmeOperator)
+    main(LegoOperator)

@@ -113,7 +113,7 @@ jobs:
         run: |
           set -eux
           echo "Publishing lib"
-          charmcraft publish-lib charms.lego_base_k8s.v9.lego_client
+          charmcraft publish-lib charms.lego_base_k8s.v0.lego_client
       - name: Archive charmcraft logs
         if: failure()
         uses: actions/upload-artifact@v4

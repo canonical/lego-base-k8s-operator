@@ -74,7 +74,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from ops.charm import CharmBase
 from ops.framework import EventBase
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.pebble import ExecError
 
 # The unique Charmhub library identifier, never change it
@@ -85,7 +85,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 logger = logging.getLogger(__name__)
@@ -198,22 +198,17 @@ class AcmeClient(CharmBase):
         if not self.unit.is_leader():
             return
         if not self._container.can_connect():
-            self.unit.status = WaitingStatus("Waiting for container to be ready")
+            logger.info("Waiting for container to be ready")
             event.defer()
             return
         csr_subject = self._get_subject_from_csr(event.certificate_signing_request)
         if len(csr_subject) > 64:
-            self.unit.status = BlockedStatus(
-                f"Subject is too long (> 64 characters): {csr_subject}"
-            )
+            logger.error("Subject is too long (> 64 characters): %s", csr_subject)
             return
         logger.info("Received Certificate Creation Request for domain %s", csr_subject)
         self._push_csr_to_workload(event.certificate_signing_request)
-        self.unit.status = MaintenanceStatus("Executing lego command")
         if not self._execute_lego_cmd():
-            self.unit.status = BlockedStatus(
-                "Workload command execution failed, use `juju debug-log` for more information."
-            )
+            logger.error("Failed to execute lego command")
             return
         signed_certificates = self._pull_certificates_from_workload(csr_subject)
         self.tls_certificates.set_relation_certificate(
@@ -223,7 +218,6 @@ class AcmeClient(CharmBase):
             chain=list(reversed(signed_certificates)),
             relation_id=event.relation_id,
         )
-        self.unit.status = ActiveStatus()
 
     @property
     def _cmd(self) -> List[str]:

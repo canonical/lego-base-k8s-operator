@@ -14,7 +14,7 @@ from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ign
     generate_private_key,
 )
 from ops import testing
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.pebble import ExecError
 from ops.testing import Harness
 
@@ -215,13 +215,16 @@ class TestCharm(unittest.TestCase):
             "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
         )
 
-        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
+        with self.assertLogs(level="ERROR") as log:
+            self.add_csr_to_remote_unit_relation_data(
+                relation_id=relation_id, app_or_unit="remote/0"
+            )
+            self.assertIn(
+                "Failed to execute lego command",
+                log.output[1],
+            )
 
-        assert self.harness.charm.unit.status == BlockedStatus(
-            "Workload command execution failed, use `juju debug-log` for more information."
-        )
-
-    def test_given_cannot_connect_to_container_when_certificate_creation_request_then_request_fails_and_status_is_waiting(  # noqa: E501
+    def test_given_cannot_connect_to_container_when_certificate_creation_request_then_request_fails_and_message_is_logged(  # noqa: E501
         self,
     ):
         self.harness.update_config(
@@ -235,11 +238,13 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", False)
 
-        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
+        with self.assertLogs(level="INFO") as log:
+            self.add_csr_to_remote_unit_relation_data(
+                relation_id=relation_id, app_or_unit="remote/0"
+            )
+            self.assertIn("Waiting for container to be ready", log.output[0])
 
-        assert self.harness.charm.unit.status == WaitingStatus("Waiting for container to be ready")
-
-    def test_given_subject_name_is_too_long_when_certificate_creation_request_then_status_is_blocked(  # noqa: E501
+    def test_given_subject_name_is_too_long_when_certificate_creation_request_then_message_is_logged(  # noqa: E501
         self,
     ):
         long_subject_names = ["a" * 65, "a" * 66, "a" * 255]
@@ -258,9 +263,14 @@ class TestCharm(unittest.TestCase):
             self.add_csr_to_remote_unit_relation_data(
                 relation_id=relation_id, app_or_unit="remote/0", subject=long_subject_name
             )
-            assert self.harness.charm.unit.status == BlockedStatus(
-                f"Subject is too long (> 64 characters): {long_subject_name}"
-            )
+
+            with self.assertLogs(level="ERROR") as log:
+                self.add_csr_to_remote_unit_relation_data(
+                    relation_id=relation_id, app_or_unit="remote/0", subject=long_subject_name
+                )
+                self.assertIn(
+                    f"Subject is too long (> 64 characters): {long_subject_name}", log.output[0]
+                )
 
     def test_given_config_is_not_valid_when_certificate_creation_request_then_status_is_blocked(
         self,

@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import yaml
 from charms.lego_base_k8s.v0.lego_client import AcmeClient  # type: ignore[import]
-from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ignore[import]
+from charms.tls_certificates_interface.v3.tls_certificates import (  # type: ignore[import]
     generate_csr,
     generate_private_key,
 )
@@ -20,7 +20,7 @@ from ops.testing import Harness
 
 testing.SIMULATE_CAN_CONNECT = True  # type: ignore[attr-defined]
 test_cert = Path(__file__).parent / "test_lego.crt"
-TLS_LIB_PATH = "charms.tls_certificates_interface.v1.tls_certificates"
+TLS_LIB_PATH = "charms.tls_certificates_interface.v3.tls_certificates"
 
 
 class MockExec:
@@ -161,7 +161,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV1.set_relation_certificate",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
     )
     def test_given_cmd_when_certificate_creation_request_then_certificate_is_set_in_relation(
         self, mock_set_relation_certificate

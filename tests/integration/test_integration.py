@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("tests/integration/lego-operator/metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
-TLS_LIB_PATH = "lib/charms/tls_certificates_interface/v1/tls_certificates.py"
+TLS_LIB_PATH = "lib/charms/tls_certificates_interface/v3/tls_certificates.py"
 LEGO_CLIENT_LIB_PATH = "lib/charms/lego_base_k8s/v0/lego_client.py"
 LEGO_OPERATOR_DIR = "tests/integration/lego-operator"
 

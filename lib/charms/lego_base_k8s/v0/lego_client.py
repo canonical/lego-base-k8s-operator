@@ -66,9 +66,9 @@ from abc import abstractmethod
 from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
-from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ignore[import]
+from charms.tls_certificates_interface.v3.tls_certificates import (  # type: ignore[import]
     CertificateCreationRequestEvent,
-    TLSCertificatesProvidesV1,
+    TLSCertificatesProvidesV3,
 )
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -85,7 +85,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 
 logger = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ class AcmeClient(CharmBase):
         self._certs_path = "/tmp/.lego/certificates/"
         self._container_name = list(self.meta.containers.values())[0].name
         self._container = self.unit.get_container(self._container_name)
-        self.tls_certificates = TLSCertificatesProvidesV1(self, "certificates")
+        self.tls_certificates = TLSCertificatesProvidesV3(self, "certificates")
         self.framework.observe(
             self.tls_certificates.on.certificate_creation_request,
             self._on_certificate_creation_request,

@@ -5,7 +5,7 @@
 """Dummy charm for integration testing."""
 
 
-from charms.lego_base_k8s.v0.lego_client import AcmeClient  # type: ignore[import]
+from charms.lego_base_k8s.v0.lego_client import AcmeClient
 from ops.main import main
 from ops.model import ActiveStatus
 
@@ -14,12 +14,12 @@ class LegoOperator(AcmeClient):
     """Dummy charm for integration testing."""
 
     def __init__(self, *args):
-        """Uses the Orc8rBase library to manage events."""
+        """Use the Orc8rBase library to manage events."""
         super().__init__(*args, plugin="whatever")
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     def _on_config_changed(self, _) -> None:
-        """Handles config-changed events."""
+        """Handle config-changed events."""
         if not self.validate_generic_acme_config():
             return
         self.unit.status = ActiveStatus()

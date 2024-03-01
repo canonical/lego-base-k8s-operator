@@ -1,7 +1,7 @@
 black
 codespell
 coverage[toml]
-juju>=3.1.6
+juju
 pyright
 pytest
 pytest-operator

@@ -66,7 +66,7 @@ from abc import abstractmethod
 from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
-from charms.tls_certificates_interface.v3.tls_certificates import (  # type: ignore[import]
+from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateCreationRequestEvent,
     TLSCertificatesProvidesV3,
 )
@@ -85,7 +85,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 
 logger = logging.getLogger(__name__)
@@ -113,7 +113,7 @@ class AcmeClient(CharmBase):
         self._plugin = plugin
 
     def validate_generic_acme_config(self) -> bool:
-        """Validates generic ACME config."""
+        """Validate generic ACME config."""
         if not self._email:
             self.unit.status = BlockedStatus("Email address was not provided")
             return False
@@ -150,7 +150,7 @@ class AcmeClient(CharmBase):
 
     @staticmethod
     def _get_subject_from_csr(certificate_signing_request: str) -> str:
-        """Returns subject from a provided CSR."""
+        """Return subject from a provided CSR."""
         csr = x509.load_pem_x509_csr(certificate_signing_request.encode())
         subject_value = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
         if isinstance(subject_value, bytes):
@@ -159,11 +159,11 @@ class AcmeClient(CharmBase):
             return subject_value
 
     def _push_csr_to_workload(self, csr: str) -> None:
-        """Pushes CSR to workload container."""
+        """Push CSR to workload container."""
         self._container.push(path=self._csr_path, make_dirs=True, source=csr.encode())
 
     def _execute_lego_cmd(self) -> bool:
-        """Executes lego command in workload container."""
+        """Execute lego command in workload container."""
         process = self._container.exec(
             self._cmd, timeout=300, working_dir="/tmp", environment=self._plugin_config
         )
@@ -172,18 +172,18 @@ class AcmeClient(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():  # type: ignore
+            for line in e.stderr.splitlines():
                 logger.error("    %s", line)
             return False
         return True
 
     def _pull_certificates_from_workload(self, csr_subject: str) -> List[Union[bytes, str]]:
-        """Pulls certificates from workload container."""
+        """Pull certificates from workload container."""
         chain_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.crt")
-        return [cert for cert in chain_pem.read().split("\n\n")]  # type: ignore[arg-type]
+        return list(chain_pem.read().split("\n\n"))
 
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
-        """Handles certificate creation request event.
+        """Handle certificate creation request event.
 
         - Retrieves subject from CSR
         - Pushes CSR to workload container

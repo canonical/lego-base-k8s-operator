@@ -8,8 +8,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import yaml
-from charms.lego_base_k8s.v0.lego_client import AcmeClient  # type: ignore[import]
-from charms.tls_certificates_interface.v3.tls_certificates import (  # type: ignore[import]
+from charms.lego_base_k8s.v0.lego_client import AcmeClient
+from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
@@ -64,6 +64,7 @@ class TestCharm(unittest.TestCase):
                     "name": "lego",
                     "containers": {"lego": {"resource": "lego-image"}},
                     "provides": {"certificates": {"interface": "tls-certificates"}},
+                    "requires": {"logging": {"interface": "loki-push-api"}},
                 }
             ),
             config=yaml.safe_dump(

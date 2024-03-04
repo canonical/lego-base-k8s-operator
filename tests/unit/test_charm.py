@@ -197,7 +197,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("ops.model.Container.exec", new_callable=Mock)
-    def test_given_command_execution_fails_when_certificate_creation_request_then_request_fails_and_status_is_blocked(  # noqa: E501
+    def test_given_command_execution_fails_when_certificate_creation_request_then_request_fails(  # noqa: E501
         self, patch_exec
     ):
         self.harness.update_config(
@@ -309,3 +309,62 @@ class TestCharm(unittest.TestCase):
         self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
         self.harness.charm.unit.status == BlockedStatus("Invalid specific configuration")
+
+    def test_given_config_is_not_valid_when_update_status_then_status_is_blocked(
+        self,
+    ):
+        self.harness.update_config(
+            {
+                "email": "banana",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("certificates", "remote")
+        self.harness.add_relation_unit(relation_id, "remote/0")
+        self.harness.set_can_connect("lego", True)
+
+        self.harness.charm.on.update_status.emit()
+
+        assert self.harness.charm.unit.status == BlockedStatus("Invalid email address")
+
+    @patch("ops.model.Container.exec", new=MockExec)
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
+    )
+    def test_given_cmd__and_outstanding_requests_when_update_status_then_certificate_is_set_in_relation(
+        self, mock_set_relation_certificate
+    ):
+        self.harness.update_config(
+            {
+                "email": "banana@email.com",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
+        self.harness.set_leader(False)
+        relation_id = self.harness.add_relation("certificates", "remote")
+        self.harness.add_relation_unit(relation_id, "remote/0")
+        self.harness.set_can_connect("lego", True)
+        container = self.harness.model.unit.get_container("lego")
+        container.push(
+            "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
+        )
+
+        csr = self.add_csr_to_remote_unit_relation_data(
+            relation_id=relation_id, app_or_unit="remote/0"
+        )
+
+        mock_set_relation_certificate.assert_not_called()
+
+        self.harness.set_leader(True)
+        self.harness.charm.on.update_status.emit()
+
+        with open(test_cert, "r") as file:
+            expected_certs = (file.read()).split("\n\n")
+        mock_set_relation_certificate.assert_called_with(
+            certificate=expected_certs[0],
+            certificate_signing_request=csr,
+            ca=expected_certs[-1],
+            chain=list(reversed(expected_certs)),
+            relation_id=relation_id,
+        )

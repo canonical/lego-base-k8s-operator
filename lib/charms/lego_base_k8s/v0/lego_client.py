@@ -150,7 +150,7 @@ class AcmeClient(CharmBase):
         return True
 
     @abstractmethod
-    def _on_config_changed(self, event: Optional[EventBase]) -> None:
+    def _on_config_changed(self, event: EventBase) -> None:
         """Validate configuration and sets status accordingly.
 
         Implementations need to follow the following steps:
@@ -205,7 +205,8 @@ class AcmeClient(CharmBase):
 
     def _sync_certificates(self, event: EventBase) -> None:
         """Goes through all the certificates relations and handles outstanding requests."""
-        if not self._is_unit_active():
+        self._on_config_changed(event)
+        if not isinstance(self.unit.status, ActiveStatus):
             logger.debug(
                 "Charm is not active, skipping certificate generation, \
                 will try again in during the next update status event."
@@ -230,7 +231,8 @@ class AcmeClient(CharmBase):
         - Pulls certificates from workload
         - Sends certificates to requesting charm
         """
-        if not self._is_unit_active():
+        self._on_config_changed(event)
+        if not isinstance(self.unit.status, ActiveStatus):
             logger.debug(
                 "Charm is not active, skipping certificate generation, \
                 will try again in during the next update status event."
@@ -244,7 +246,7 @@ class AcmeClient(CharmBase):
             logger.debug("Only the leader can handle certificate requests")
             return
         if not self._container.can_connect():
-            logger.info("Waiting for container to be ready")
+            logger.info("Container is not ready")
             return
         csr_subject = self._get_subject_from_csr(csr)
         if len(csr_subject) > 64:
@@ -271,11 +273,6 @@ class AcmeClient(CharmBase):
             chain=list(reversed(signed_certificates)),
             relation_id=relation_id,
         )
-
-    def _is_unit_active(self) -> bool:
-        """Check if the unit is active."""
-        self._on_config_changed(None)
-        return isinstance(self.unit.status, ActiveStatus)
 
     @property
     def _cmd(self) -> List[str]:

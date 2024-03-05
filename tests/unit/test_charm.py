@@ -243,7 +243,7 @@ class TestCharm(unittest.TestCase):
             self.add_csr_to_remote_unit_relation_data(
                 relation_id=relation_id, app_or_unit="remote/0"
             )
-            self.assertIn("Waiting for container to be ready", log.output[0])
+            self.assertIn("Container is not ready", log.output[0])
 
     def test_given_subject_name_is_too_long_when_certificate_creation_request_then_message_is_logged(  # noqa: E501
         self,

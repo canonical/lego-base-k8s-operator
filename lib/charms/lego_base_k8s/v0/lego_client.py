@@ -11,9 +11,18 @@ To get started using the library, you need to fetch the library using `charmcraf
 ```shell
 charmcraft fetch-lib charms.lego_client_operator.v0.lego_client
 ```
+
+You will also need the following libraries:
+
+```shell
+charmcraft fetch-lib charms.tls_certificates_interface.v3.tls_certificates
+charmcraft fetch-lib charms.loki_k8s.v1.loki_push_api
+```
+
 You will also need to add the following library to the charm's `requirements.txt` file:
 - jsonschema
 - cryptography
+- cosl
 
 Then, to use the library in an example charm, you can do the following:
 ```python
@@ -51,12 +60,19 @@ Charms using this library are expected to:
   configuration. Keys must be capitalized and follow the plugins documentation from
   lego.
 
-Charms that leverage this library also need to specify a `provides` relation in their
-`metadata.yaml` file. For example:
+Charms that leverage this library also need to specify a `certificates` integration in their
+`metadata.yaml` file:
 ```yaml
 provides:
   certificates:
     interface: tls-certificates
+```
+
+They shouldalso specify a `logging` integration in their `metadata.yaml` file:
+```yaml
+requires:
+  logging:
+    interface: loki_push_api
 ```
 """
 import abc
@@ -66,6 +82,7 @@ from abc import abstractmethod
 from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
+from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateCreationRequestEvent,
     TLSCertificatesProvidesV3,
@@ -85,7 +102,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 
 logger = logging.getLogger(__name__)
@@ -105,6 +122,7 @@ class AcmeClient(CharmBase):
         self._certs_path = "/tmp/.lego/certificates/"
         self._container_name = list(self.meta.containers.values())[0].name
         self._container = self.unit.get_container(self._container_name)
+        self._logging = LogForwarder(self, relation_name="logging")
         self.tls_certificates = TLSCertificatesProvidesV3(self, "certificates")
         self.framework.observe(
             self.tls_certificates.on.certificate_creation_request,

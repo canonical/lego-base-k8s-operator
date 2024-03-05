@@ -150,7 +150,7 @@ class AcmeClient(CharmBase):
         return True
 
     @abstractmethod
-    def _on_config_changed(self, event: EventBase) -> None:
+    def _on_config_changed(self, event: Optional[EventBase]) -> None:
         """Validate configuration and sets status accordingly.
 
         Implementations need to follow the following steps:
@@ -205,8 +205,13 @@ class AcmeClient(CharmBase):
 
     def _sync_certificates(self, event: EventBase) -> None:
         """Goes through all the certificates relations and handles outstanding requests."""
-        self._on_config_changed(event)
-        for relation in self.model.relations[CERTIFICATES_RELATION_NAME]:
+        if not self._is_unit_active():
+            logger.debug(
+                "Charm is not active, skipping certificate generation, \
+                will try again in during the next update status event."
+            )
+            return
+        for relation in self.model.relations.get(CERTIFICATES_RELATION_NAME, []):
             outstanding_requests = self.tls_certificates.get_outstanding_certificate_requests(
                 relation_id=relation.id
             )
@@ -225,17 +230,16 @@ class AcmeClient(CharmBase):
         - Pulls certificates from workload
         - Sends certificates to requesting charm
         """
-        self._on_config_changed(event)
-        self._generate_signed_certificate(event.certificate_signing_request, event.relation_id)
-
-    def _generate_signed_certificate(self, csr: str, relation_id: int):
-        """Generate signed certificate from the ACME provider."""
-        if not isinstance(self.unit.status, ActiveStatus):
+        if not self._is_unit_active():
             logger.debug(
                 "Charm is not active, skipping certificate generation, \
                 will try again in during the next update status event."
             )
             return
+        self._generate_signed_certificate(event.certificate_signing_request, event.relation_id)
+
+    def _generate_signed_certificate(self, csr: str, relation_id: int):
+        """Generate signed certificate from the ACME provider."""
         if not self.unit.is_leader():
             logger.debug("Only the leader can handle certificate requests")
             return
@@ -267,6 +271,11 @@ class AcmeClient(CharmBase):
             chain=list(reversed(signed_certificates)),
             relation_id=relation_id,
         )
+
+    def _is_unit_active(self) -> bool:
+        """Check if the unit is active."""
+        self._on_config_changed(None)
+        return isinstance(self.unit.status, ActiveStatus)
 
     @property
     def _cmd(self) -> List[str]:

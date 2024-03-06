@@ -7,7 +7,6 @@
 
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
 from ops.main import main
-from ops.model import ActiveStatus
 
 
 class LegoOperator(AcmeClient):
@@ -16,13 +15,10 @@ class LegoOperator(AcmeClient):
     def __init__(self, *args):
         """Use the Orc8rBase library to manage events."""
         super().__init__(*args, plugin="whatever")
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
-    def _on_config_changed(self, _) -> None:
-        """Handle config-changed events."""
-        if not self.validate_generic_acme_config():
-            return
-        self.unit.status = ActiveStatus()
+    def _validate_plugin_config(self) -> str:
+        """Validate the plugin specific configuration."""
+        return ""
 
     def _plugin_config(self) -> dict:
         """Plugin specific additional configuration for the command."""

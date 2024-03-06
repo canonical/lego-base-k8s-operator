@@ -102,10 +102,12 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 
 logger = logging.getLogger(__name__)
+
+CERTIFICATES_RELATION_NAME = "certificates"
 
 
 class AcmeClient(CharmBase):
@@ -123,11 +125,12 @@ class AcmeClient(CharmBase):
         self._container_name = list(self.meta.containers.values())[0].name
         self._container = self.unit.get_container(self._container_name)
         self._logging = LogForwarder(self, relation_name="logging")
-        self.tls_certificates = TLSCertificatesProvidesV3(self, "certificates")
+        self.tls_certificates = TLSCertificatesProvidesV3(self, CERTIFICATES_RELATION_NAME)
         self.framework.observe(
             self.tls_certificates.on.certificate_creation_request,
             self._on_certificate_creation_request,
         )
+        self.framework.observe(self.on.update_status, self._sync_certificates)
         self._plugin = plugin
 
     def validate_generic_acme_config(self) -> bool:
@@ -200,6 +203,25 @@ class AcmeClient(CharmBase):
         chain_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.crt")
         return list(chain_pem.read().split("\n\n"))
 
+    def _sync_certificates(self, event: EventBase) -> None:
+        """Goes through all the certificates relations and handles outstanding requests."""
+        self._on_config_changed(event)
+        if not isinstance(self.unit.status, ActiveStatus):
+            logger.debug(
+                "Charm is not active, skipping certificate generation, \
+                will try again in during the next update status event."
+            )
+            return
+        for relation in self.model.relations.get(CERTIFICATES_RELATION_NAME, []):
+            outstanding_requests = self.tls_certificates.get_outstanding_certificate_requests(
+                relation_id=relation.id
+            )
+            for request in outstanding_requests:
+                self._generate_signed_certificate(
+                    csr=request.csr,
+                    relation_id=relation.id,
+                )
+
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
         """Handle certificate creation request event.
 
@@ -211,30 +233,45 @@ class AcmeClient(CharmBase):
         """
         self._on_config_changed(event)
         if not isinstance(self.unit.status, ActiveStatus):
-            event.defer()
+            logger.debug(
+                "Charm is not active, skipping certificate generation, \
+                will try again in during the next update status event."
+            )
             return
+        self._generate_signed_certificate(event.certificate_signing_request, event.relation_id)
+
+    def _generate_signed_certificate(self, csr: str, relation_id: int):
+        """Generate signed certificate from the ACME provider."""
         if not self.unit.is_leader():
+            logger.debug("Only the leader can handle certificate requests")
             return
         if not self._container.can_connect():
-            logger.info("Waiting for container to be ready")
-            event.defer()
+            logger.info("Container is not ready")
             return
-        csr_subject = self._get_subject_from_csr(event.certificate_signing_request)
+        csr_subject = self._get_subject_from_csr(csr)
         if len(csr_subject) > 64:
             logger.error("Subject is too long (> 64 characters): %s", csr_subject)
             return
         logger.info("Received Certificate Creation Request for domain %s", csr_subject)
-        self._push_csr_to_workload(event.certificate_signing_request)
+        self._push_csr_to_workload(csr=csr)
         if not self._execute_lego_cmd():
-            logger.error("Failed to execute lego command")
+            logger.error(
+                "Failed to execute lego command \
+                will try again in during the next update status event."
+            )
             return
-        signed_certificates = self._pull_certificates_from_workload(csr_subject)
+        if not (signed_certificates := self._pull_certificates_from_workload(csr_subject)):
+            logger.error(
+                "Failed to pull certificates from workload \
+                will try again in during the next update status event."
+            )
+            return
         self.tls_certificates.set_relation_certificate(
             certificate=signed_certificates[0],
-            certificate_signing_request=event.certificate_signing_request,
+            certificate_signing_request=csr,
             ca=signed_certificates[-1],
             chain=list(reversed(signed_certificates)),
-            relation_id=event.relation_id,
+            relation_id=relation_id,
         )
 
     @property

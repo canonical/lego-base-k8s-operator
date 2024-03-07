@@ -72,7 +72,7 @@ import abc
 import logging
 import re
 from abc import abstractmethod
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
@@ -147,7 +147,7 @@ class AcmeClient(CharmBase):
         event.add_status(ActiveStatus())
 
     def _sync_certificates(self, event: EventBase) -> None:
-        """Goes through all the certificates relations and handles outstanding requests."""
+        """Go through all the certificates relations and handle outstanding requests."""
         if not self._container.can_connect():
             return
         if (err := self.validate_generic_acme_config()):
@@ -167,14 +167,7 @@ class AcmeClient(CharmBase):
                 )
 
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
-        """Handle certificate creation request event.
-
-        - Retrieves subject from CSR
-        - Pushes CSR to workload container
-        - Executes lego command in workload
-        - Pulls certificates from workload
-        - Sends certificates to requesting charm
-        """
+        """Handle certificate creation request event."""
         if not self._container.can_connect():
             return
         if (err := self.validate_generic_acme_config()):
@@ -222,7 +215,7 @@ class AcmeClient(CharmBase):
         if isinstance(subject_value, bytes):
             return subject_value.decode()
         else:
-            return subject_value
+            return str(subject_value)
 
     def _push_csr_to_workload(self, csr: str) -> None:
         """Push CSR to workload container."""
@@ -238,12 +231,12 @@ class AcmeClient(CharmBase):
             logger.info(f"Return message: {stdout}, {error}")
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
-            for line in e.stderr.splitlines():
+            for line in e.stderr.splitlines():  # type: ignore
                 logger.error("    %s", line)
             return False
         return True
 
-    def _pull_certificates_from_workload(self, csr_subject: str) -> List[Union[bytes, str]]:
+    def _pull_certificates_from_workload(self, csr_subject: str) -> List[str]:
         """Pull certificates from workload container."""
         chain_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.crt")
         return list(chain_pem.read().split("\n\n"))

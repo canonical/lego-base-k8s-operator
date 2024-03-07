@@ -32,7 +32,7 @@ class MockExec:
 
     def wait_output(self, *args, **kwargs):
         if self.raise_exec_error:
-            raise ExecError(command="lego", exit_code=1, stdout="", stderr="")
+            raise ExecError(command=["lego"], exit_code=1, stdout="", stderr="")
         return "stdout", "stderr"
 
 
@@ -287,7 +287,7 @@ class TestCharm(unittest.TestCase):
                     f"Subject is too long (> 64 characters): {long_subject_name}", log.output[0]
                 )
 
-    def test_given_generic_config_is_not_valid_when_certificate_creation_request_then_status_is_blocked(
+    def test_given_generic_config_is_not_valid_when_certificate_creation_request_then_status_is_blocked(  # noqa: E501
         self,
     ):
         self.harness.update_config(
@@ -326,8 +326,9 @@ class TestCharm(unittest.TestCase):
 
         self.harness.evaluate_status()
 
-        self.harness.charm.unit.status == BlockedStatus("Invalid specific configuration")
-
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Invalid specific configuration")
+        )
     def test_given_generic_config_is_not_valid_when_update_status_then_status_is_blocked(
         self,
     ):
@@ -385,7 +386,9 @@ class TestCharm(unittest.TestCase):
 
         self.harness.evaluate_status()
 
-        self.harness.charm.unit.status == BlockedStatus("Invalid specific configuration")
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Invalid specific configuration")
+        )
 
     def test_given_invalid_specific_config_when_config_changed_then_status_is_blocked(self):
         self.harness.update_config(
@@ -404,13 +407,15 @@ class TestCharm(unittest.TestCase):
 
         self.harness.evaluate_status()
 
-        self.harness.charm.unit.status == BlockedStatus("Invalid specific configuration")
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Invalid specific configuration")
+        )
 
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
     )
-    def test_given_cmd_and_outstanding_requests_when_update_status_then_certificate_is_set_in_relation(
+    def test_given_cmd_and_outstanding_requests_when_update_status_then_certificate_is_set_in_relation(  # noqa: E501
         self, mock_set_relation_certificate
     ):
         self.harness.update_config(
@@ -451,7 +456,7 @@ class TestCharm(unittest.TestCase):
     @patch(
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
     )
-    def test_given_cmd_and_outstanding_requests_when_config_changed_then_certificate_is_set_in_relation(
+    def test_given_cmd_and_outstanding_requests_when_config_changed_then_certificate_is_set_in_relation(  # noqa: E501
         self, mock_set_relation_certificate
     ):
         self.harness.update_config(

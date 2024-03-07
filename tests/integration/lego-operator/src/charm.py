@@ -5,6 +5,8 @@
 """Dummy charm for integration testing."""
 
 
+from typing import Dict
+
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
 from ops.main import main
 
@@ -20,9 +22,10 @@ class LegoOperator(AcmeClient):
         """Validate the plugin specific configuration."""
         return ""
 
-    def _plugin_config(self) -> dict:
+    @property
+    def _plugin_config(self) -> Dict[str, str]:
         """Plugin specific additional configuration for the command."""
-        return {}
+        return {"key": "value"}
 
 
 if __name__ == "__main__":  # pragma: nocover

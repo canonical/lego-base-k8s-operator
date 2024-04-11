@@ -54,6 +54,7 @@ jobs:
           provider: microk8s
           channel: 1.29-strict/stable
           juju-channel: 3.4/stable
+          lxd-channel: 5.20/stable
       - name: Run tests using tox
         run: tox -e integration
       - name: Archive charmcraft logs

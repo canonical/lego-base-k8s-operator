@@ -95,7 +95,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 
 logger = logging.getLogger(__name__)
@@ -124,6 +124,7 @@ class AcmeClient(CharmBase):
             self._on_certificate_creation_request,
         )
         self.framework.observe(self.on.config_changed, self._sync_certificates)
+        self.framework.observe(self.on.pebble_ready, self._sync_certificates)
         self.framework.observe(self.on.update_status, self._sync_certificates)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
         self._plugin = plugin

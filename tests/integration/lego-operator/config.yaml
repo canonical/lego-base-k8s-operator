@@ -1,9 +1,0 @@
-options:
-  email:
-    type: string
-    description: Account email address.
-    default: "example@email.com"
-  server:
-    type: string
-    description: The ACME server URL.
-    default: "https://acme-staging-v02.api.letsencrypt.org/directory"

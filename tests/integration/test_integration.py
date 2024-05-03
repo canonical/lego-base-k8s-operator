@@ -12,7 +12,7 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("tests/integration/lego-operator/metadata.yaml").read_text())
+METADATA = yaml.safe_load(Path("tests/integration/lego-operator/charmcraft.yaml").read_text())
 APP_NAME = METADATA["name"]
 TLS_LIB_PATH = "lib/charms/tls_certificates_interface/v3/tls_certificates.py"
 LOKI_LIB_PATH = "lib/charms/loki_k8s/v1/loki_push_api.py"

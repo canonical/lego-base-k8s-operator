@@ -1,5 +1,30 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+description: |
+  A dummy charm that is used to test the ACME integration.
+
+summary: |
+    A dummy charm that is used to test the ACME integration.
+
+name: lego-operator
+
+provides:
+  certificates:
+    interface: tls-certificates
+
+requires:
+  logging:
+    interface: loki_push_api
+
+containers:
+  lego:
+    resource: lego-image
+
+resources:
+  lego-image:
+    type: oci-image
+    description: OCI image for lego (goacme/lego)
+    upstream-source: goacme/lego
 
 type: charm
 bases:
@@ -18,3 +43,14 @@ parts:
       - rustc
       - cargo
       - pkg-config
+
+config:
+  options:
+    email:
+      type: string
+      description: Account email address.
+      default: "example@email.com"
+    server:
+      type: string
+      description: The ACME server URL.
+      default: "https://acme-staging-v02.api.letsencrypt.org/directory"

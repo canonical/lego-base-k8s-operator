@@ -95,7 +95,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 
 logger = logging.getLogger(__name__)
@@ -333,9 +333,15 @@ class AcmeClient(CharmBase):
     @property
     def _email(self) -> Optional[str]:
         """Email address to use for the ACME account."""
-        return self.model.config.get("email", None)
+        email = self.model.config.get("email", None)
+        if not isinstance(email, str):
+            return None
+        return email
 
     @property
     def _server(self) -> Optional[str]:
         """ACME server address."""
-        return self.model.config.get("server", None)
+        server = self.model.config.get("server", None)
+        if not isinstance(server, str):
+            return None
+        return server

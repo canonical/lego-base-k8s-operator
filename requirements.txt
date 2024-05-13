@@ -12,7 +12,7 @@ cffi==1.16.0
     # via cryptography
 cosl==0.0.11
     # via -r requirements.in
-cryptography==42.0.6
+cryptography==42.0.7
     # via -r requirements.in
 jsonschema==4.22.0
     # via -r requirements.in

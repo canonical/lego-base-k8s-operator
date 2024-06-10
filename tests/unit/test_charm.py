@@ -14,7 +14,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_private_key,
 )
 from ops import testing
-from ops.model import BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 from ops.testing import Harness
 
@@ -307,7 +307,7 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus("Invalid email address")
 
-    def test_given_invalid_specific_config_when_certificate_creation_request_then_status_is_blocked(  # noqa: E501
+    def test_given_valid_config_when_update_status_then_status_is_active(  # noqa: E501
         self,
     ):
         self.harness.update_config(
@@ -320,15 +320,47 @@ class TestCharm(unittest.TestCase):
         relation_id = self.harness.add_relation("certificates", "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
-        self.harness.charm.valid_config = False
+        self.harness.charm.valid_config = True
+
+        self.harness.evaluate_status()
+
+        self.assertEqual(
+            self.harness.charm.unit.status, ActiveStatus("All certificate requests are fulfilled")
+        )
+
+    @patch("ops.model.Container.exec", new=MockExec)
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
+    )
+    def test_given_valid_config_and_pending_requests_when_update_status_then_status_is_active(  # noqa: E501
+        self, mock_set_relation_certificate
+    ):
+        self.harness.set_leader(False)
+        self.harness.update_config(
+            {
+                "email": "banana@email.com",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
+        relation_id = self.harness.add_relation("certificates", "remote")
+        self.harness.add_relation_unit(relation_id, "remote/0")
+        self.harness.set_can_connect("lego", True)
+        self.harness.charm.valid_config = True
+        container = self.harness.model.unit.get_container("lego")
+        container.push(
+            "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
+        )
 
         self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
         self.harness.evaluate_status()
 
         self.assertEqual(
-            self.harness.charm.unit.status, BlockedStatus("Invalid specific configuration")
+            self.harness.charm.unit.status, ActiveStatus(
+                "1 pending certificate request, check juju debug-log for more information"
+            )
         )
+
     def test_given_generic_config_is_not_valid_when_update_status_then_status_is_blocked(
         self,
     ):
@@ -391,6 +423,29 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_given_invalid_specific_config_when_config_changed_then_status_is_blocked(self):
+        self.harness.update_config(
+            {
+                "email": "banana@email.com",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
+        self.harness.set_leader(True)
+        relation_id = self.harness.add_relation("certificates", "remote")
+        self.harness.add_relation_unit(relation_id, "remote/0")
+        self.harness.set_can_connect("lego", True)
+        self.harness.charm.valid_config = False
+
+        self.harness.charm.on.config_changed.emit()
+
+        self.harness.evaluate_status()
+
+        self.assertEqual(
+            self.harness.charm.unit.status, BlockedStatus("Invalid specific configuration")
+        )
+
+    def test_given_invalid_specific_config_when_certificate_creation_request_then_status_is_blocked(  # noqa: E501
+        self,
+    ):
         self.harness.update_config(
             {
                 "email": "banana@email.com",

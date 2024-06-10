@@ -95,7 +95,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 
 logger = logging.getLogger(__name__)
@@ -144,7 +144,7 @@ class AcmeClient(CharmBase):
                 BlockedStatus(err)
             )
             return
-        event.add_status(ActiveStatus())
+        event.add_status(ActiveStatus(self._get_certificate_fulfillment_status()))
 
     def _sync_certificates(self, event: EventBase) -> None:
         """Go through all the certificates relations and handle outstanding requests."""
@@ -277,6 +277,18 @@ class AcmeClient(CharmBase):
             chain=list(reversed(signed_certificates)),
             relation_id=relation_id,
         )
+
+    def _get_certificate_fulfillment_status(self) -> str:
+        """Return the status message reflecting how many certificate requests are still pending."""
+        outstanding_requests_num = len(
+            self.tls_certificates.get_outstanding_certificate_requests()
+        )
+        if outstanding_requests_num > 0:
+            return (
+                f"{outstanding_requests_num} pending certificate request, "
+                "check juju debug-log for more information"
+            )
+        return "All certificate requests are fulfilled"
 
     @property
     def _cmd(self) -> List[str]:

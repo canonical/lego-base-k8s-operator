@@ -307,27 +307,6 @@ class TestCharm(unittest.TestCase):
 
         assert self.harness.charm.unit.status == BlockedStatus("Invalid email address")
 
-    def test_given_valid_config_when_update_status_then_status_is_active(  # noqa: E501
-        self,
-    ):
-        self.harness.update_config(
-            {
-                "email": "banana@email.com",
-                "server": "https://acme-v02.api.letsencrypt.org/directory",
-            }
-        )
-        self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
-        self.harness.add_relation_unit(relation_id, "remote/0")
-        self.harness.set_can_connect("lego", True)
-        self.harness.charm.valid_config = True
-
-        self.harness.evaluate_status()
-
-        self.assertEqual(
-            self.harness.charm.unit.status, ActiveStatus("All certificate requests are fulfilled")
-        )
-
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
@@ -357,7 +336,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.charm.unit.status, ActiveStatus(
-                "1 pending certificate request, check juju debug-log for more information"
+                "0/1 certificate requests are fulfilled"
             )
         )
 

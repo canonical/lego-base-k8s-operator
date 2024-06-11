@@ -283,12 +283,13 @@ class AcmeClient(CharmBase):
         outstanding_requests_num = len(
             self.tls_certificates.get_outstanding_certificate_requests()
         )
-        if outstanding_requests_num > 0:
-            return (
-                f"{outstanding_requests_num} pending certificate request, "
-                "check juju debug-log for more information"
-            )
-        return "All certificate requests are fulfilled"
+        total_requests_num = len(
+            self.tls_certificates.get_requirer_csrs()
+        )
+        fulfilled_certs = total_requests_num - outstanding_requests_num
+        return (
+            f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
+        )
 
     @property
     def _cmd(self) -> List[str]:

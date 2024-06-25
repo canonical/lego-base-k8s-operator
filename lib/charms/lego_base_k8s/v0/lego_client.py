@@ -131,7 +131,7 @@ class AcmeClient(CharmBase):
     def _on_collect_status(self, event: CollectStatusEvent) -> None:
         """Handle the collect status event."""
         if not self._container.can_connect():
-            event.add_status(WaitingStatus("Waiting to be able to connect to vault unit"))
+            event.add_status(WaitingStatus("Waiting to be able to connect to LEGO container"))
             return
 
         if (err := self.validate_generic_acme_config()):

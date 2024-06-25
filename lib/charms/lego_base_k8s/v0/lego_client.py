@@ -70,6 +70,7 @@ requires:
 """
 import abc
 import logging
+import os
 import re
 from abc import abstractmethod
 from typing import Dict, List, Optional
@@ -227,7 +228,7 @@ class AcmeClient(CharmBase):
             self._cmd,
             timeout=300,
             working_dir="/tmp",
-            environment=self._common_config | self._plugin_config,
+            environment=self._app_environment | self._plugin_config,
         )
         try:
             stdout, error = process.wait_output()
@@ -320,23 +321,16 @@ class AcmeClient(CharmBase):
         ]
 
     @property
-    def _common_config(self) -> Dict[str, str]:
-        """Common configuration for the command.
-
-        Used to set the environment context
-
-        Returns:
-            dict[str, str]: common configuration.
-        """
-        common_config = {}
-        if self._http_proxy:
-            common_config["HTTP_PROXY"] = self._http_proxy
-        if self._https_proxy:
-            common_config["HTTPS_PROXY"] = self._https_proxy
-        if self._no_proxy:
-            common_config["NO_PROXY"] = self._no_proxy
-
-        return common_config
+    def _app_environment(self) -> Dict[str, str]:
+        """Extract proxy model environment variables."""
+        env = {}
+        if (http_proxy := os.environ.get("HTTP_PROXY", "")):
+            env["HTTP_PROXY"] = http_proxy
+        if (https_proxy := os.environ.get("HTTPS_PROXY", "")):
+            env["HTTPS_PROXY"] = https_proxy
+        if(no_proxy := os.environ.get("NO_PROXY", "")):
+            env["NO_PROXY"] = no_proxy
+        return env
 
     @property
     @abstractmethod
@@ -380,24 +374,3 @@ class AcmeClient(CharmBase):
         if not isinstance(server, str):
             return None
         return server
-
-    @property
-    def _http_proxy(self) -> Optional[str]:
-        http_proxy = self.model.config.get("http_proxy", None)
-        if not isinstance(http_proxy, str):
-            return None
-        return http_proxy
-
-    @property
-    def _https_proxy(self) -> Optional[str]:
-        https_proxy = self.model.config.get("https_proxy", None)
-        if not isinstance(https_proxy, str):
-            return None
-        return https_proxy
-
-    @property
-    def _no_proxy(self) -> Optional[str]:
-        no_proxy = self.model.config.get("no_proxy", None)
-        if not isinstance(no_proxy, str):
-            return None
-        return no_proxy

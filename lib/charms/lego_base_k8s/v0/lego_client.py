@@ -320,15 +320,18 @@ class AcmeClient(CharmBase):
             "run",
         ]
 
+
+
     @property
     def _app_environment(self) -> Dict[str, str]:
         """Extract proxy model environment variables."""
         env = {}
-        if (http_proxy := os.environ.get("HTTP_PROXY", "")):
+
+        if (http_proxy := get_env_var(env_var="HTTP_PROXY")):
             env["HTTP_PROXY"] = http_proxy
-        if (https_proxy := os.environ.get("HTTPS_PROXY", "")):
+        if (https_proxy := get_env_var(env_var="HTTPS_PROXY")):
             env["HTTPS_PROXY"] = https_proxy
-        if(no_proxy := os.environ.get("NO_PROXY", "")):
+        if(no_proxy := get_env_var(env_var="NO_PROXY")):
             env["NO_PROXY"] = no_proxy
         return env
 
@@ -374,3 +377,16 @@ class AcmeClient(CharmBase):
         if not isinstance(server, str):
             return None
         return server
+
+def get_env_var(env_var: str) -> Optional[str]:
+    """Get the environment variable value.
+
+    Looks for all upper-case and all low-case of the `env_var`.
+
+    Args:
+        env_var: Name of the environment variable.
+
+    Returns:
+        Value of the environment variable. None if not found.
+    """
+    return os.environ.get(env_var.upper(), os.environ.get(env_var.lower(), None))

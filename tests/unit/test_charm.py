@@ -256,7 +256,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.model.unit.status,
-            WaitingStatus("Waiting to be able to connect to vault unit"),
+            WaitingStatus("Waiting to be able to connect to LEGO container"),
         )
 
     def test_given_subject_name_is_too_long_when_certificate_creation_request_then_message_is_logged(  # noqa: E501

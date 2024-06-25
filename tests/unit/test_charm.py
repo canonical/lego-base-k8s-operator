@@ -530,9 +530,9 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.exec")
     @patch.dict(
         "os.environ", {
-            "HTTP_PROXY": "Random proxy",
-            "HTTPS_PROXY": "Random https proxy",
-            "NO_PROXY": "No proxy",
+            "JUJU_CHARM_HTTP_PROXY": "Random proxy",
+            "JUJU_CHARM_HTTPS_PROXY": "Random https proxy",
+            "JUJU_CHARM_NO_PROXY": "No proxy",
         }
     )
     @patch(

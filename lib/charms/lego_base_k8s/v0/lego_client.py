@@ -327,12 +327,14 @@ class AcmeClient(CharmBase):
         """Extract proxy model environment variables."""
         env = {}
 
-        if (http_proxy := get_env_var(env_var="HTTP_PROXY")):
+        if (http_proxy := get_env_var(env_var="JUJU_CHARM_HTTP_PROXY")):
             env["HTTP_PROXY"] = http_proxy
-        if (https_proxy := get_env_var(env_var="HTTPS_PROXY")):
+        if (https_proxy := get_env_var(env_var="JUJU_CHARM_HTTPS_PROXY")):
             env["HTTPS_PROXY"] = https_proxy
         # there's no need for no_proxy if there's no http_proxy or https_proxy
-        if(no_proxy := get_env_var(env_var="NO_PROXY")) and (http_proxy and https_proxy):
+        if(
+            no_proxy := get_env_var(env_var="JUJU_CHARM_NO_PROXY")
+        ) and (http_proxy and https_proxy):
             env["NO_PROXY"] = no_proxy
         return env
 

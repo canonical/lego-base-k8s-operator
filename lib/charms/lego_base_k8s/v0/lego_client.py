@@ -75,6 +75,9 @@ from abc import abstractmethod
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
+from charms.certificate_transfer_interface.v0.certificate_transfer import (
+    CertificateTransferProvides
+)
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateCreationRequestEvent,
@@ -101,6 +104,7 @@ LIBPATCH = 10
 logger = logging.getLogger(__name__)
 
 CERTIFICATES_RELATION_NAME = "certificates"
+CA_TRANSFER_RELATION_NAME = "send_ca_cert"
 
 
 class AcmeClient(CharmBase):
@@ -119,6 +123,7 @@ class AcmeClient(CharmBase):
         self._container = self.unit.get_container(self._container_name)
         self._logging = LogForwarder(self, relation_name="logging")
         self.tls_certificates = TLSCertificatesProvidesV3(self, CERTIFICATES_RELATION_NAME)
+        self.cert_transfer = CertificateTransferProvides(self, CA_TRANSFER_RELATION_NAME)
         self.framework.observe(
             self.tls_certificates.on.certificate_creation_request,
             self._on_certificate_creation_request,
@@ -165,6 +170,9 @@ class AcmeClient(CharmBase):
                     csr=request.csr,
                     relation_id=relation.id,
                 )
+        collected_cas = self._pull_ca_certificates_from_workload()
+        for relation in self.model.relations.get(CA_TRANSFER_RELATION_NAME, []):
+            self.cert_transfer.set_certificate(certificate="", ca=collected_cas[0], chain=[], relation_id=relation.id)
 
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
         """Handle certificate creation request event."""
@@ -240,6 +248,10 @@ class AcmeClient(CharmBase):
         """Pull certificates from workload container."""
         chain_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.crt")
         return list(chain_pem.read().split("\n\n"))
+
+    def _pull_ca_certificates_from_workload(self, csr_subject) -> List[str]:
+        ca_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.issuer.crt")
+        return list(ca_pem.read().split("\n\n"))
 
     def _generate_signed_certificate(self, csr: str, relation_id: int):
         """Generate signed certificate from the ACME provider."""

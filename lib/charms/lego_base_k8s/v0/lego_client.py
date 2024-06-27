@@ -70,6 +70,7 @@ requires:
 """
 import abc
 import logging
+import os
 import re
 from abc import abstractmethod
 from typing import Dict, List, Optional
@@ -95,7 +96,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 
 logger = logging.getLogger(__name__)
@@ -224,7 +225,10 @@ class AcmeClient(CharmBase):
     def _execute_lego_cmd(self) -> bool:
         """Execute lego command in workload container."""
         process = self._container.exec(
-            self._cmd, timeout=300, working_dir="/tmp", environment=self._plugin_config
+            self._cmd,
+            timeout=300,
+            working_dir="/tmp",
+            environment=self._app_environment | self._plugin_config,
         )
         try:
             stdout, error = process.wait_output()
@@ -316,6 +320,24 @@ class AcmeClient(CharmBase):
             "run",
         ]
 
+
+
+    @property
+    def _app_environment(self) -> Dict[str, str]:
+        """Extract proxy model environment variables."""
+        env = {}
+
+        if (http_proxy := get_env_var(env_var="JUJU_CHARM_HTTP_PROXY")):
+            env["HTTP_PROXY"] = http_proxy
+        if (https_proxy := get_env_var(env_var="JUJU_CHARM_HTTPS_PROXY")):
+            env["HTTPS_PROXY"] = https_proxy
+        # there's no need for no_proxy if there's no http_proxy or https_proxy
+        if(
+            no_proxy := get_env_var(env_var="JUJU_CHARM_NO_PROXY")
+        ) and (http_proxy and https_proxy):
+            env["NO_PROXY"] = no_proxy
+        return env
+
     @property
     @abstractmethod
     def _plugin_config(self) -> Dict[str, str]:
@@ -358,3 +380,16 @@ class AcmeClient(CharmBase):
         if not isinstance(server, str):
             return None
         return server
+
+def get_env_var(env_var: str) -> Optional[str]:
+    """Get the environment variable value.
+
+    Looks for all upper-case and all low-case of the `env_var`.
+
+    Args:
+        env_var: Name of the environment variable.
+
+    Returns:
+        Value of the environment variable. None if not found.
+    """
+    return os.environ.get(env_var.upper(), os.environ.get(env_var.lower(), None))

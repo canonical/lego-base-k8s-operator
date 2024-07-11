@@ -96,7 +96,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 11
+LIBPATCH = 12
 
 
 logger = logging.getLogger(__name__)
@@ -224,11 +224,13 @@ class AcmeClient(CharmBase):
 
     def _execute_lego_cmd(self) -> bool:
         """Execute lego command in workload container."""
+        if (app_env:=self._app_environment):
+            logger.info("Running the Lego command with %s environment variables", app_env)
         process = self._container.exec(
             self._cmd,
             timeout=300,
             working_dir="/tmp",
-            environment=self._app_environment | self._plugin_config,
+            environment=app_env | self._plugin_config,
         )
         try:
             stdout, error = process.wait_output()
@@ -331,10 +333,7 @@ class AcmeClient(CharmBase):
             env["HTTP_PROXY"] = http_proxy
         if (https_proxy := get_env_var(env_var="JUJU_CHARM_HTTPS_PROXY")):
             env["HTTPS_PROXY"] = https_proxy
-        # there's no need for no_proxy if there's no http_proxy or https_proxy
-        if(
-            no_proxy := get_env_var(env_var="JUJU_CHARM_NO_PROXY")
-        ) and (http_proxy and https_proxy):
+        if(no_proxy := get_env_var(env_var="JUJU_CHARM_NO_PROXY")):
             env["NO_PROXY"] = no_proxy
         return env
 

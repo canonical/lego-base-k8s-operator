@@ -68,6 +68,7 @@ requires:
     interface: loki_push_api
 ```
 """
+
 import abc
 import logging
 import os
@@ -96,7 +97,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 12
+LIBPATCH = 13
 
 
 logger = logging.getLogger(__name__)
@@ -135,15 +136,11 @@ class AcmeClient(CharmBase):
             event.add_status(WaitingStatus("Waiting to be able to connect to LEGO container"))
             return
 
-        if (err := self.validate_generic_acme_config()):
-            event.add_status(
-                BlockedStatus(err)
-            )
+        if err := self.validate_generic_acme_config():
+            event.add_status(BlockedStatus(err))
             return
-        if (err := self._validate_plugin_config()):
-            event.add_status(
-                BlockedStatus(err)
-            )
+        if err := self._validate_plugin_config():
+            event.add_status(BlockedStatus(err))
             return
         event.add_status(ActiveStatus(self._get_certificate_fulfillment_status()))
 
@@ -151,10 +148,10 @@ class AcmeClient(CharmBase):
         """Go through all the certificates relations and handle outstanding requests."""
         if not self._container.can_connect():
             return
-        if (err := self.validate_generic_acme_config()):
+        if err := self.validate_generic_acme_config():
             logger.error(err)
             return
-        if (err := self._validate_plugin_config()):
+        if err := self._validate_plugin_config():
             logger.error(err)
             return
         for relation in self.model.relations.get(CERTIFICATES_RELATION_NAME, []):
@@ -171,10 +168,10 @@ class AcmeClient(CharmBase):
         """Handle certificate creation request event."""
         if not self._container.can_connect():
             return
-        if (err := self.validate_generic_acme_config()):
+        if err := self.validate_generic_acme_config():
             logger.error(err)
             return
-        if (err := self._validate_plugin_config()):
+        if err := self._validate_plugin_config():
             logger.error(err)
             return
         self._generate_signed_certificate(event.certificate_signing_request, event.relation_id)
@@ -224,7 +221,7 @@ class AcmeClient(CharmBase):
 
     def _execute_lego_cmd(self) -> bool:
         """Execute lego command in workload container."""
-        if (app_env:=self._app_environment):
+        if app_env := self._app_environment:
             logger.info("Running the Lego command with %s environment variables", app_env)
         process = self._container.exec(
             self._cmd,
@@ -259,7 +256,8 @@ class AcmeClient(CharmBase):
         if len(csr_subject) > 64:
             logger.error(
                 "Failed to request certificate, \
-                Subject is too long (> 64 characters): %s", csr_subject
+                Subject is too long (> 64 characters): %s",
+                csr_subject,
             )
             return
         logger.info("Received Certificate Creation Request for domain %s", csr_subject)
@@ -289,13 +287,9 @@ class AcmeClient(CharmBase):
         outstanding_requests_num = len(
             self.tls_certificates.get_outstanding_certificate_requests()
         )
-        total_requests_num = len(
-            self.tls_certificates.get_requirer_csrs()
-        )
+        total_requests_num = len(self.tls_certificates.get_requirer_csrs())
         fulfilled_certs = total_requests_num - outstanding_requests_num
-        return (
-            f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
-        )
+        return f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
 
     @property
     def _cmd(self) -> List[str]:
@@ -322,18 +316,16 @@ class AcmeClient(CharmBase):
             "run",
         ]
 
-
-
     @property
     def _app_environment(self) -> Dict[str, str]:
         """Extract proxy model environment variables."""
         env = {}
 
-        if (http_proxy := get_env_var(env_var="JUJU_CHARM_HTTP_PROXY")):
+        if http_proxy := get_env_var(env_var="JUJU_CHARM_HTTP_PROXY"):
             env["HTTP_PROXY"] = http_proxy
-        if (https_proxy := get_env_var(env_var="JUJU_CHARM_HTTPS_PROXY")):
+        if https_proxy := get_env_var(env_var="JUJU_CHARM_HTTPS_PROXY"):
             env["HTTPS_PROXY"] = https_proxy
-        if(no_proxy := get_env_var(env_var="JUJU_CHARM_NO_PROXY")):
+        if no_proxy := get_env_var(env_var="JUJU_CHARM_NO_PROXY"):
             env["NO_PROXY"] = no_proxy
         return env
 
@@ -379,6 +371,7 @@ class AcmeClient(CharmBase):
         if not isinstance(server, str):
             return None
         return server
+
 
 def get_env_var(env_var: str) -> Optional[str]:
     """Get the environment variable value.

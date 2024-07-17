@@ -4,7 +4,6 @@
 
 """Dummy charm for integration testing."""
 
-
 from typing import Dict
 
 from charms.lego_base_k8s.v0.lego_client import AcmeClient

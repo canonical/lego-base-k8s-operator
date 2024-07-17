@@ -248,9 +248,7 @@ class TestCharm(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", False)
 
-        self.add_csr_to_remote_unit_relation_data(
-                relation_id=relation_id, app_or_unit="remote/0"
-            )
+        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
         self.harness.evaluate_status()
 
@@ -335,9 +333,7 @@ class TestCharm(unittest.TestCase):
         self.harness.evaluate_status()
 
         self.assertEqual(
-            self.harness.charm.unit.status, ActiveStatus(
-                "0/1 certificate requests are fulfilled"
-            )
+            self.harness.charm.unit.status, ActiveStatus("0/1 certificate requests are fulfilled")
         )
 
     def test_given_generic_config_is_not_valid_when_update_status_then_status_is_blocked(
@@ -529,11 +525,12 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec")
     @patch.dict(
-        "os.environ", {
+        "os.environ",
+        {
             "JUJU_CHARM_HTTP_PROXY": "Random proxy",
             "JUJU_CHARM_HTTPS_PROXY": "Random https proxy",
             "JUJU_CHARM_NO_PROXY": "No proxy",
-        }
+        },
     )
     @patch(
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
@@ -549,7 +546,7 @@ class TestCharm(unittest.TestCase):
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
             }
         )
-        mock_exec.return_value =  MockExec()
+        mock_exec.return_value = MockExec()
         self.harness.set_leader(True)
         relation_id = self.harness.add_relation("certificates", "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
@@ -558,25 +555,26 @@ class TestCharm(unittest.TestCase):
         container.push(
             "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
         )
-        self.add_csr_to_remote_unit_relation_data(
-            relation_id=relation_id, app_or_unit="remote/0"
-        )
+        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
         mock_exec.assert_called_with(
             [
-                'lego',
-                '--email',
-                'banana@email.com',
-                '--accept-tos',
-                '--csr', '/tmp/csr.pem',
-                '--server', 'https://acme-v02.api.letsencrypt.org/directory',
-                '--dns', 'namecheap',
-                'run'
+                "lego",
+                "--email",
+                "banana@email.com",
+                "--accept-tos",
+                "--csr",
+                "/tmp/csr.pem",
+                "--server",
+                "https://acme-v02.api.letsencrypt.org/directory",
+                "--dns",
+                "namecheap",
+                "run",
             ],
             timeout=300,
             working_dir="/tmp",
             environment={
-            "HTTP_PROXY": "Random proxy",
-            "HTTPS_PROXY": "Random https proxy",
-            "NO_PROXY": "No proxy",
-        }
+                "HTTP_PROXY": "Random proxy",
+                "HTTPS_PROXY": "Random https proxy",
+                "NO_PROXY": "No proxy",
+            },
         )

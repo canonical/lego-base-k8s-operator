@@ -229,10 +229,7 @@ class TestCharm(unittest.TestCase):
             self.add_csr_to_remote_unit_relation_data(
                 relation_id=relation_id, app_or_unit="remote/0"
             )
-            self.assertIn(
-                "Failed to execute lego command",
-                log.output[1],
-            )
+            assert "Failed to execute lego command" in log.output[1]
 
     def test_given_cannot_connect_to_container_when_certificate_creation_request_then_status_is_waiting(  # noqa: E501
         self,
@@ -256,34 +253,6 @@ class TestCharm(unittest.TestCase):
             self.harness.model.unit.status,
             WaitingStatus("Waiting to be able to connect to LEGO container"),
         )
-
-    def test_given_subject_name_is_too_long_when_certificate_creation_request_then_message_is_logged(  # noqa: E501
-        self,
-    ):
-        long_subject_names = ["a" * 65, "a" * 66, "a" * 255]
-        self.harness.update_config(
-            {
-                "email": "banana@email.com",
-                "server": "https://acme-v02.api.letsencrypt.org/directory",
-            }
-        )
-        self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
-        self.harness.add_relation_unit(relation_id, "remote/0")
-        self.harness.set_can_connect("lego", True)
-
-        for long_subject_name in long_subject_names:
-            self.add_csr_to_remote_unit_relation_data(
-                relation_id=relation_id, app_or_unit="remote/0", subject=long_subject_name
-            )
-
-            with self.assertLogs(level="ERROR") as log:
-                self.add_csr_to_remote_unit_relation_data(
-                    relation_id=relation_id, app_or_unit="remote/0", subject=long_subject_name
-                )
-                self.assertIn(
-                    f"Subject is too long (> 64 characters): {long_subject_name}", log.output[0]
-                )
 
     def test_given_generic_config_is_not_valid_when_certificate_creation_request_then_status_is_blocked(  # noqa: E501
         self,

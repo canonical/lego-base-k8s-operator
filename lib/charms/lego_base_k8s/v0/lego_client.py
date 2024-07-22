@@ -97,7 +97,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 13
+LIBPATCH = 14
 
 
 logger = logging.getLogger(__name__)
@@ -253,13 +253,6 @@ class AcmeClient(CharmBase):
             logger.info("Container is not ready")
             return
         csr_subject = self._get_subject_from_csr(csr)
-        if len(csr_subject) > 64:
-            logger.error(
-                "Failed to request certificate, \
-                Subject is too long (> 64 characters): %s",
-                csr_subject,
-            )
-            return
         logger.info("Received Certificate Creation Request for domain %s", csr_subject)
         self._push_csr_to_workload(csr=csr)
         if not self._execute_lego_cmd():

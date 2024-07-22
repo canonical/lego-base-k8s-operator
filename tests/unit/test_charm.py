@@ -229,10 +229,7 @@ class TestCharm(unittest.TestCase):
             self.add_csr_to_remote_unit_relation_data(
                 relation_id=relation_id, app_or_unit="remote/0"
             )
-            self.assertIn(
-                "Failed to execute lego command",
-                log.output[1],
-            )
+            assert "Failed to execute lego command" in log.output[1]
 
     def test_given_cannot_connect_to_container_when_certificate_creation_request_then_status_is_waiting(  # noqa: E501
         self,

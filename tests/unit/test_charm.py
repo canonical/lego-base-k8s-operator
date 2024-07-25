@@ -25,7 +25,7 @@ test_cert = Path(__file__).parent / "test_lego.crt"
 TLS_LIB_PATH = "charms.tls_certificates_interface.v3.tls_certificates"
 CERT_TRANSFER_LIB_PATH = "charms.certificate_transfer_interface.v1.certificate_transfer"
 CERTIFICATES_RELATION_NAME = "certificates"
-CA_TRANSFER_RELATION_NAME = "send_ca_cert"
+CA_TRANSFER_RELATION_NAME = "send-ca-cert"
 
 
 class MockExec:
@@ -67,7 +67,7 @@ class TestCharm(unittest.TestCase):
                     "containers": {"lego": {"resource": "lego-image"}},
                     "provides": {
                         CERTIFICATES_RELATION_NAME: {"interface": "tls-certificates"},
-                        CA_TRANSFER_RELATION_NAME: {"interface": "tls-certificate_transfer"},
+                        CA_TRANSFER_RELATION_NAME: {"interface": "tls-certificate-transfer"},
                     },
                     "requires": {"logging": {"interface": "loki-push-api"}},
                 }

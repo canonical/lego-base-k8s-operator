@@ -109,7 +109,7 @@ LIBPATCH = 14
 logger = logging.getLogger(__name__)
 
 CERTIFICATES_RELATION_NAME = "certificates"
-CA_TRANSFER_RELATION_NAME = "send_ca_cert"
+CA_TRANSFER_RELATION_NAME = "send-ca-cert"
 
 
 class AcmeClient(CharmBase):
@@ -133,6 +133,7 @@ class AcmeClient(CharmBase):
             self._on_certificate_creation_request,
         )
         self.cert_transfer = CertificateTransferProvides(self, CA_TRANSFER_RELATION_NAME)
+        self.framework.observe(self.on.send_ca_cert_relation_joined, self._configure)
         self.framework.observe(self.on.config_changed, self._configure)
         self.framework.observe(self.on.update_status, self._configure)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)

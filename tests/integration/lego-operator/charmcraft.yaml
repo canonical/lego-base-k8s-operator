@@ -11,6 +11,8 @@ name: lego-operator
 provides:
   certificates:
     interface: tls-certificates
+  send-ca-cert:
+    interface: certificate_transfer
 
 requires:
   logging:

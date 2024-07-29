@@ -580,11 +580,8 @@ class TestCharm(unittest.TestCase):
     @patch(
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.get_provider_certificates",
     )
-    @patch(
-        f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates",
-    )
     def test_given_cert_transfer_relation_and_ca_certificates_then_ca_certificates_added_in_relation_data(  # noqa: E501
-        self, mock_add_certificates, mock_get_provider_certificates
+        self, mock_get_provider_certificates
     ):
         mock_get_provider_certificates.return_value = [
             ProviderCertificate(
@@ -605,10 +602,10 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(False)
-        self.harness.add_relation(CA_TRANSFER_RELATION_NAME, "remote")
+        relation_id = self.harness.add_relation(CA_TRANSFER_RELATION_NAME, "remote")
 
         self.harness.set_can_connect("lego", True)
 
         self.harness.set_leader(True)
         self.harness.charm.on.config_changed.emit()
-        mock_add_certificates.assert_called_with({"ca"})
+        assert "ca" in self.harness.get_relation_data(relation_id, "lego").get("certificates")

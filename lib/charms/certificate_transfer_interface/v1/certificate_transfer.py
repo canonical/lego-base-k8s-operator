@@ -35,7 +35,7 @@ class DummyCertificateTransferProviderCharm(CharmBase):
 
     def _on_certificates_relation_joined(self, event: RelationJoinedEvent):
         certificate = "my certificate"
-        self.certificate_transfer.add_certificate(certificate)
+        self.certificate_transfer.add_certificates(certificate)
 
 
 if __name__ == "__main__":
@@ -215,20 +215,6 @@ class CertificateTransferProvides(Object):
         super().__init__(charm, relationship_name)
         self.charm = charm
         self.relationship_name = relationship_name
-
-    def add_certificate(self, certificate: str, relation_id: Optional[int] = None) -> None:
-        """Add certificate to relation data.
-
-        Adds certificate to all relations if relation_id is not provided.
-
-        Args:
-            certificate (str): A single certificate string in PEM format
-            relation_id (int): Juju relation ID
-
-        Returns:
-            None
-        """
-        self.add_certificates({certificate}, relation_id)
 
     def add_certificates(self, certificates: Set[str], relation_id: Optional[int] = None) -> None:
         """Add certificates from a set to relation data.

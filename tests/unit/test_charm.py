@@ -608,4 +608,4 @@ class TestCharm(unittest.TestCase):
 
         self.harness.set_leader(True)
         self.harness.charm.on.config_changed.emit()
-        assert "ca" in self.harness.get_relation_data(relation_id, "lego").get("certificates")
+        assert "ca" in self.harness.get_relation_data(relation_id, "lego").get("certificates","")

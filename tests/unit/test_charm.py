@@ -4,12 +4,14 @@
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 import json
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import yaml
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
 from charms.tls_certificates_interface.v3.tls_certificates import (
+    ProviderCertificate,
     generate_csr,
     generate_private_key,
 )
@@ -21,6 +23,9 @@ from ops.testing import Harness
 testing.SIMULATE_CAN_CONNECT = True  # type: ignore[attr-defined]
 test_cert = Path(__file__).parent / "test_lego.crt"
 TLS_LIB_PATH = "charms.tls_certificates_interface.v3.tls_certificates"
+CERT_TRANSFER_LIB_PATH = "charms.certificate_transfer_interface.v1.certificate_transfer"
+CERTIFICATES_RELATION_NAME = "certificates"
+CA_TRANSFER_RELATION_NAME = "send-ca-cert"
 
 
 class MockExec:
@@ -60,7 +65,10 @@ class TestCharm(unittest.TestCase):
                 {
                     "name": "lego",
                     "containers": {"lego": {"resource": "lego-image"}},
-                    "provides": {"certificates": {"interface": "tls-certificates"}},
+                    "provides": {
+                        CERTIFICATES_RELATION_NAME: {"interface": "tls-certificates"},
+                        CA_TRANSFER_RELATION_NAME: {"interface": "tls-certificate-transfer"},
+                    },
                     "requires": {"logging": {"interface": "loki-push-api"}},
                 }
             ),
@@ -183,7 +191,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
@@ -216,7 +224,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         patch_exec.return_value = MockExec(raise_exec_error=True)
@@ -241,7 +249,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", False)
 
@@ -264,7 +272,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
 
@@ -288,7 +296,7 @@ class TestCharm(unittest.TestCase):
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
             }
         )
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         self.harness.charm.valid_config = True
@@ -315,7 +323,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
 
@@ -335,7 +343,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
 
@@ -353,7 +361,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         self.harness.charm.valid_config = False
@@ -374,7 +382,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         self.harness.charm.valid_config = False
@@ -397,7 +405,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         self.harness.charm.valid_config = False
@@ -424,7 +432,7 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(False)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
@@ -465,8 +473,9 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.set_leader(False)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
+
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
@@ -517,7 +526,7 @@ class TestCharm(unittest.TestCase):
         )
         mock_exec.return_value = MockExec()
         self.harness.set_leader(True)
-        relation_id = self.harness.add_relation("certificates", "remote")
+        relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
@@ -547,3 +556,59 @@ class TestCharm(unittest.TestCase):
                 "NO_PROXY": "No proxy",
             },
         )
+
+    @patch(
+        f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates",
+    )
+    def test_given_cert_transfer_relation_not_created_then_ca_certificates_not_added_in_relation_data(  # noqa: E501
+        self, mock_add_certificates
+    ):
+        self.harness.update_config(
+            {
+                "email": "banana@email.com",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
+        self.harness.set_leader(False)
+
+        self.harness.set_can_connect("lego", True)
+
+        self.harness.set_leader(True)
+        self.harness.charm.on.config_changed.emit()
+        mock_add_certificates.assert_not_called()
+
+    @patch(
+        f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates",
+    )
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.get_provider_certificates",
+    )
+    def test_given_cert_transfer_relation_and_ca_certificates_then_ca_certificates_added_in_relation_data(  # noqa: E501
+        self, mock_get_provider_certificates, mock_add_certificates
+    ):
+        mock_get_provider_certificates.return_value = [
+            ProviderCertificate(
+                relation_id=0,
+                application_name="whatever app",
+                csr="certificate_signing_request",
+                certificate="certificate",
+                ca="ca",
+                chain=["chain"],
+                revoked=False,
+                expiry_time=datetime.now() + timedelta(hours=24),
+            )
+        ]
+        self.harness.update_config(
+            {
+                "email": "banana@email.com",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
+        )
+        self.harness.set_leader(False)
+        self.harness.add_relation(CA_TRANSFER_RELATION_NAME, "remote")
+
+        self.harness.set_can_connect("lego", True)
+
+        self.harness.set_leader(True)
+        self.harness.charm.on.config_changed.emit()
+        mock_add_certificates.assert_called_with({"ca"})

@@ -16,6 +16,7 @@ You will also need the following libraries:
 
 ```shell
 charmcraft fetch-lib charms.tls_certificates_interface.v3.tls_certificates
+charmcraft fetch-lib charms.certificate_transfer_interface.v1.certificate_transfer
 charmcraft fetch-lib charms.loki_k8s.v1.loki_push_api
 ```
 
@@ -60,6 +61,8 @@ Charms using this library are expected to:
 provides:
   certificates:
     interface: tls-certificates
+  send-ca-cert:
+    interface: certificate_transfer
 ```
 - Specify a `logging` integration in their `metadata.yaml` file:
 ```yaml
@@ -74,9 +77,12 @@ import logging
 import os
 import re
 from abc import abstractmethod
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from urllib.parse import urlparse
 
+from charms.certificate_transfer_interface.v1.certificate_transfer import (
+    CertificateTransferProvides,
+)
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateCreationRequestEvent,
@@ -103,6 +109,7 @@ LIBPATCH = 14
 logger = logging.getLogger(__name__)
 
 CERTIFICATES_RELATION_NAME = "certificates"
+CA_TRANSFER_RELATION_NAME = "send-ca-cert"
 
 
 class AcmeClient(CharmBase):
@@ -125,9 +132,12 @@ class AcmeClient(CharmBase):
             self.tls_certificates.on.certificate_creation_request,
             self._on_certificate_creation_request,
         )
-        self.framework.observe(self.on.config_changed, self._sync_certificates)
-        self.framework.observe(self.on.update_status, self._sync_certificates)
+        self.cert_transfer = CertificateTransferProvides(self, CA_TRANSFER_RELATION_NAME)
+        self.framework.observe(self.on.send_ca_cert_relation_joined, self._configure)
+        self.framework.observe(self.on.config_changed, self._configure)
+        self.framework.observe(self.on.update_status, self._configure)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
+
         self._plugin = plugin
 
     def _on_collect_status(self, event: CollectStatusEvent) -> None:
@@ -144,8 +154,13 @@ class AcmeClient(CharmBase):
             return
         event.add_status(ActiveStatus(self._get_certificate_fulfillment_status()))
 
-    def _sync_certificates(self, event: EventBase) -> None:
-        """Go through all the certificates relations and handle outstanding requests."""
+    def _configure(self, event: EventBase) -> None:
+        """Configure the Lego provider.
+
+        Validate configs.
+        Go through all the certificates relations and handle outstanding requests.
+        Go Through all certificate transfer relations and share the CA certificates.
+        """
         if not self._container.can_connect():
             return
         if err := self.validate_generic_acme_config():
@@ -163,6 +178,8 @@ class AcmeClient(CharmBase):
                     csr=request.csr,
                     relation_id=relation.id,
                 )
+        if self._is_relation_created(CA_TRANSFER_RELATION_NAME):
+            self.cert_transfer.add_certificates(self._get_issuing_ca_certificates())
 
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
         """Handle certificate creation request event."""
@@ -275,6 +292,13 @@ class AcmeClient(CharmBase):
             relation_id=relation_id,
         )
 
+    def _get_issuing_ca_certificates(self) -> Set[str]:
+        """Get a list of the CA certificates that have been used with the issued certs."""
+        return {
+            provider_certificate.ca
+            for provider_certificate in self.tls_certificates.get_provider_certificates()
+        }
+
     def _get_certificate_fulfillment_status(self) -> str:
         """Return the status message reflecting how many certificate requests are still pending."""
         outstanding_requests_num = len(
@@ -283,6 +307,14 @@ class AcmeClient(CharmBase):
         total_requests_num = len(self.tls_certificates.get_requirer_csrs())
         fulfilled_certs = total_requests_num - outstanding_requests_num
         return f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
+
+    def _is_relation_created(self, relation_name: str) -> bool:
+        """Check if the relation is created.
+
+        Args:
+            relation_name: Checked relation name
+        """
+        return bool(self.model.get_relation(relation_name))
 
     @property
     def _cmd(self) -> List[str]:

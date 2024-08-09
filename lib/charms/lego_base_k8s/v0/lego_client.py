@@ -274,7 +274,7 @@ class AcmeClient(CharmBase):
         """Get a list of the CA certificates that have been used with the issued certs."""
         return {
             str(provider_certificate.ca)
-            for provider_certificate in self.tls_certificates._get_provider_certificates()
+            for provider_certificate in self.tls_certificates.get_provider_certificates()
         }
 
     def _get_certificate_fulfillment_status(self) -> str:
@@ -283,7 +283,6 @@ class AcmeClient(CharmBase):
             self.tls_certificates.get_outstanding_certificate_requests()
         )
         total_requests_num = len(self.tls_certificates.get_certificate_requests())
-        print(total_requests_num, outstanding_requests_num)
         fulfilled_certs = total_requests_num - outstanding_requests_num
         return f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
 

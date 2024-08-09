@@ -659,7 +659,7 @@ class TestCharm(unittest.TestCase):
         f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates",
     )
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4._get_provider_certificates",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_provider_certificates",
     )
     def test_given_cert_transfer_relation_and_ca_certificates_then_ca_certificates_added_in_relation_data(  # noqa: E501
         self, mock_get_provider_certificates, mock_add_certificates

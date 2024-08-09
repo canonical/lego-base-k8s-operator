@@ -4,25 +4,32 @@
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 import json
 import unittest
-from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import yaml
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
-from charms.tls_certificates_interface.v3.tls_certificates import (
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
+    CertificateSigningRequest,
     ProviderCertificate,
-    generate_csr,
-    generate_private_key,
+    RequirerCSR,
 )
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 from ops.testing import Harness
 
+from tests.unit.certificates_helpers import (
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
+
 testing.SIMULATE_CAN_CONNECT = True  # type: ignore[attr-defined]
 test_cert = Path(__file__).parent / "test_lego.crt"
-TLS_LIB_PATH = "charms.tls_certificates_interface.v3.tls_certificates"
+TLS_LIB_PATH = "charms.tls_certificates_interface.v4.tls_certificates"
 CERT_TRANSFER_LIB_PATH = "charms.certificate_transfer_interface.v1.certificate_transfer"
 CERTIFICATES_RELATION_NAME = "certificates"
 CA_TRANSFER_RELATION_NAME = "send-ca-cert"
@@ -92,23 +99,21 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
 
     def add_csr_to_remote_unit_relation_data(
-        self, relation_id: int, app_or_unit: str, subject: str = "foo"
+        self, relation_id: int, app_or_unit: str, common_name: str = "foo"
     ) -> str:
         """Add a CSR to the remote unit relation data.
 
         Returns: The CSR as a string.
         """
-        csr = generate_csr(generate_private_key(), subject=subject)
+        csr = generate_csr(generate_private_key(), common_name=common_name)
         self.harness.update_relation_data(
             relation_id=relation_id,
             app_or_unit=app_or_unit,
             key_values={
-                "certificate_signing_requests": json.dumps(
-                    [{"certificate_signing_request": csr.decode().strip()}]
-                )
+                "certificate_signing_requests": json.dumps([{"certificate_signing_request": csr}])
             },
         )
-        return csr.decode().strip()
+        return csr
 
     def test_given_email_address_not_provided_when_update_config_then_status_is_blocked(
         self,
@@ -179,43 +184,58 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
+    )
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate",
     )
     def test_given_cmd_when_certificate_creation_request_then_certificate_is_set_in_relation(
-        self, mock_set_relation_certificate
+        self, mock_set_relation_certificate, mock_get_outstanding_certificate_requests
     ):
-        self.harness.update_config(
-            {
-                "email": "banana@email.com",
-                "server": "https://acme-v02.api.letsencrypt.org/directory",
-            }
-        )
         self.harness.set_leader(True)
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
-            "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
+            "/tmp/.lego/certificates/foo.com.crt", source=test_cert.read_bytes(), make_dirs=True
         )
 
-        csr = self.add_csr_to_remote_unit_relation_data(
-            relation_id=relation_id, app_or_unit="remote/0"
+        private_key = generate_private_key()
+        csr = generate_csr(private_key, "foo.com")
+        mock_get_outstanding_certificate_requests.return_value = [
+            RequirerCSR(
+                relation_id=relation_id,
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+            )
+        ]
+
+        self.harness.update_config(
+            {
+                "email": "banana@email.com",
+                "server": "https://acme-v02.api.letsencrypt.org/directory",
+            }
         )
 
         with open(test_cert, "r") as file:
             expected_certs = (file.read()).split("\n\n")
+
         mock_set_relation_certificate.assert_called_with(
-            certificate=expected_certs[0],
-            certificate_signing_request=csr,
-            ca=expected_certs[-1],
-            chain=list(reversed(expected_certs)),
-            relation_id=relation_id,
+            provider_certificate=ProviderCertificate(
+                certificate=Certificate.from_string(expected_certs[0]),
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                ca=Certificate.from_string(expected_certs[-1]),
+                chain=[Certificate.from_string(c) for c in list(reversed(expected_certs))],
+                relation_id=relation_id,
+            ),
         )
 
     @patch("ops.model.Container.exec", new_callable=Mock)
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
+    )
     def test_given_command_execution_fails_when_certificate_creation_request_then_request_fails(  # noqa: E501
-        self, patch_exec
+        self, patch_get_outstanding_certificate_requests, patch_exec
     ):
         self.harness.update_config(
             {
@@ -226,6 +246,14 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(True)
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
+        private_key = generate_private_key()
+        csr = generate_csr(private_key, "foo.com")
+        patch_get_outstanding_certificate_requests.return_value = [
+            RequirerCSR(
+                relation_id=relation_id,
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+            )
+        ]
         self.harness.set_can_connect("lego", True)
         patch_exec.return_value = MockExec(raise_exec_error=True)
         container = self.harness.model.unit.get_container("lego")
@@ -284,10 +312,19 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate",
+    )
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
+    )
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_certificate_requests",
     )
     def test_given_valid_config_and_pending_requests_when_update_status_then_status_is_active(  # noqa: E501
-        self, mock_set_relation_certificate
+        self,
+        patch_get_certificate_requests,
+        patch_get_outstanding_certificate_requests,
+        mock_set_relation_certificate,
     ):
         self.harness.set_leader(False)
         self.harness.update_config(
@@ -298,12 +335,22 @@ class TestCharm(unittest.TestCase):
         )
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
+        private_key = generate_private_key()
+        csr = generate_csr(private_key, "foo.com")
+        patch_get_certificate_requests.return_value = [
+            RequirerCSR(
+                relation_id=relation_id,
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+            )
+        ]
+        patch_get_outstanding_certificate_requests.return_value = [
+            RequirerCSR(
+                relation_id=relation_id,
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+            )
+        ]
         self.harness.set_can_connect("lego", True)
         self.harness.charm.valid_config = True
-        container = self.harness.model.unit.get_container("lego")
-        container.push(
-            "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
-        )
 
         self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
@@ -420,10 +467,13 @@ class TestCharm(unittest.TestCase):
 
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate",
+    )
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
     )
     def test_given_cmd_and_outstanding_requests_when_update_status_then_certificate_is_set_in_relation(  # noqa: E501
-        self, mock_set_relation_certificate
+        self, patch_get_outstanding_certificate_requests, mock_set_relation_certificate
     ):
         self.harness.update_config(
             {
@@ -434,14 +484,18 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(False)
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
+        private_key = generate_private_key()
+        csr = generate_csr(private_key, "foo.com")
+        patch_get_outstanding_certificate_requests.return_value = [
+            RequirerCSR(
+                relation_id=relation_id,
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+            )
+        ]
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
-            "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
-        )
-
-        csr = self.add_csr_to_remote_unit_relation_data(
-            relation_id=relation_id, app_or_unit="remote/0"
+            "/tmp/.lego/certificates/foo.com.crt", source=test_cert.read_bytes(), make_dirs=True
         )
 
         mock_set_relation_certificate.assert_not_called()
@@ -452,19 +506,24 @@ class TestCharm(unittest.TestCase):
         with open(test_cert, "r") as file:
             expected_certs = (file.read()).split("\n\n")
         mock_set_relation_certificate.assert_called_with(
-            certificate=expected_certs[0],
-            certificate_signing_request=csr,
-            ca=expected_certs[-1],
-            chain=list(reversed(expected_certs)),
-            relation_id=relation_id,
+            provider_certificate=ProviderCertificate(
+                certificate=Certificate.from_string(expected_certs[0]),
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                ca=Certificate.from_string(expected_certs[-1]),
+                chain=[Certificate.from_string(c) for c in list(reversed(expected_certs))],
+                relation_id=relation_id,
+            ),
         )
 
     @patch("ops.model.Container.exec", new=MockExec)
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate",
+    )
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
     )
     def test_given_cmd_and_outstanding_requests_when_config_changed_then_certificate_is_set_in_relation(  # noqa: E501
-        self, mock_set_relation_certificate
+        self, patch_get_outstanding_certificate_requests, mock_set_relation_certificate
     ):
         self.harness.update_config(
             {
@@ -475,15 +534,18 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(False)
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
-
+        private_key = generate_private_key()
+        csr = generate_csr(private_key, "foo.com")
+        patch_get_outstanding_certificate_requests.return_value = [
+            RequirerCSR(
+                relation_id=relation_id,
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+            )
+        ]
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
-            "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
-        )
-
-        csr = self.add_csr_to_remote_unit_relation_data(
-            relation_id=relation_id, app_or_unit="remote/0"
+            "/tmp/.lego/certificates/foo.com.crt", source=test_cert.read_bytes(), make_dirs=True
         )
 
         mock_set_relation_certificate.assert_not_called()
@@ -494,11 +556,13 @@ class TestCharm(unittest.TestCase):
         with open(test_cert, "r") as file:
             expected_certs = (file.read()).split("\n\n")
         mock_set_relation_certificate.assert_called_with(
-            certificate=expected_certs[0],
-            certificate_signing_request=csr,
-            ca=expected_certs[-1],
-            chain=list(reversed(expected_certs)),
-            relation_id=relation_id,
+            provider_certificate=ProviderCertificate(
+                certificate=Certificate.from_string(expected_certs[0]),
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                ca=Certificate.from_string(expected_certs[-1]),
+                chain=[Certificate.from_string(c) for c in list(reversed(expected_certs))],
+                relation_id=relation_id,
+            ),
         )
 
     @patch("ops.model.Container.exec")
@@ -511,10 +575,14 @@ class TestCharm(unittest.TestCase):
         },
     )
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.set_relation_certificate",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate",
+    )
+    @patch(
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
     )
     def test_given_cmd_when_app_environment_variables_set_then_command_executed_with_environment_variables(  # noqa: E501
         self,
+        patch_get_outstanding_certificate_requests,
         _,
         mock_exec,
     ):
@@ -528,12 +596,22 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(True)
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
+        private_key = generate_private_key()
+        csr = generate_csr(private_key, "foo.com")
+        patch_get_outstanding_certificate_requests.return_value = [
+            RequirerCSR(
+                relation_id=relation_id,
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+            )
+        ]
         self.harness.set_can_connect("lego", True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
-            "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
+            "/tmp/.lego/certificates/foo.com.crt", source=test_cert.read_bytes(), make_dirs=True
         )
-        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
+
+        self.harness.charm.on.update_status.emit()
+
         mock_exec.assert_called_with(
             [
                 "lego",
@@ -581,21 +659,25 @@ class TestCharm(unittest.TestCase):
         f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates",
     )
     @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV3.get_provider_certificates",
+        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4._get_provider_certificates",
     )
     def test_given_cert_transfer_relation_and_ca_certificates_then_ca_certificates_added_in_relation_data(  # noqa: E501
         self, mock_get_provider_certificates, mock_add_certificates
     ):
+        private_key = generate_private_key()
+        csr = generate_csr(private_key, "foo.com")
+
+        server_private_key = generate_private_key()
+        ca = generate_ca(server_private_key, "ca.com", 365)
+        certificate = generate_certificate(csr, ca, server_private_key, 365)
         mock_get_provider_certificates.return_value = [
             ProviderCertificate(
                 relation_id=0,
-                application_name="whatever app",
-                csr="certificate_signing_request",
-                certificate="certificate",
-                ca="ca",
-                chain=["chain"],
+                certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                certificate=Certificate.from_string(certificate),
+                ca=Certificate.from_string(ca),
+                chain=[Certificate.from_string(ca)],
                 revoked=False,
-                expiry_time=datetime.now() + timedelta(hours=24),
             )
         ]
         self.harness.update_config(
@@ -611,4 +693,4 @@ class TestCharm(unittest.TestCase):
 
         self.harness.set_leader(True)
         self.harness.charm.on.config_changed.emit()
-        mock_add_certificates.assert_called_with({"ca"})
+        mock_add_certificates.assert_called_with({ca})

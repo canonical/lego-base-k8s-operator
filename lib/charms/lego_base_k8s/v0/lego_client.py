@@ -15,7 +15,7 @@ charmcraft fetch-lib charms.lego_client_operator.v0.lego_client
 You will also need the following libraries:
 
 ```shell
-charmcraft fetch-lib charms.tls_certificates_interface.v3.tls_certificates
+charmcraft fetch-lib charms.tls_certificates_interface.v4.tls_certificates
 charmcraft fetch-lib charms.certificate_transfer_interface.v1.certificate_transfer
 charmcraft fetch-lib charms.loki_k8s.v1.loki_push_api
 ```
@@ -84,12 +84,12 @@ from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificateTransferProvides,
 )
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
-from charms.tls_certificates_interface.v3.tls_certificates import (
-    CertificateCreationRequestEvent,
-    TLSCertificatesProvidesV3,
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
+    CertificateSigningRequest,
+    ProviderCertificate,
+    TLSCertificatesProvidesV4,
 )
-from cryptography import x509
-from cryptography.x509.oid import NameOID
 from ops.charm import CharmBase, CollectStatusEvent
 from ops.framework import EventBase
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
@@ -103,7 +103,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 14
+LIBPATCH = 15
 
 
 logger = logging.getLogger(__name__)
@@ -127,13 +127,12 @@ class AcmeClient(CharmBase):
         self._container_name = list(self.meta.containers.values())[0].name
         self._container = self.unit.get_container(self._container_name)
         self._logging = LogForwarder(self, relation_name="logging")
-        self.tls_certificates = TLSCertificatesProvidesV3(self, CERTIFICATES_RELATION_NAME)
-        self.framework.observe(
-            self.tls_certificates.on.certificate_creation_request,
-            self._on_certificate_creation_request,
-        )
+        self.tls_certificates = TLSCertificatesProvidesV4(self, CERTIFICATES_RELATION_NAME)
         self.cert_transfer = CertificateTransferProvides(self, CA_TRANSFER_RELATION_NAME)
         self.framework.observe(self.on.send_ca_cert_relation_joined, self._configure)
+        self.framework.observe(
+            self.on[CERTIFICATES_RELATION_NAME].relation_changed, self._configure
+        )
         self.framework.observe(self.on.config_changed, self._configure)
         self.framework.observe(self.on.update_status, self._configure)
         self.framework.observe(self.on.collect_unit_status, self._on_collect_status)
@@ -175,23 +174,11 @@ class AcmeClient(CharmBase):
             )
             for request in outstanding_requests:
                 self._generate_signed_certificate(
-                    csr=request.csr,
+                    csr=request.certificate_signing_request,
                     relation_id=relation.id,
                 )
         if self._is_relation_created(CA_TRANSFER_RELATION_NAME):
             self.cert_transfer.add_certificates(self._get_issuing_ca_certificates())
-
-    def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
-        """Handle certificate creation request event."""
-        if not self._container.can_connect():
-            return
-        if err := self.validate_generic_acme_config():
-            logger.error(err)
-            return
-        if err := self._validate_plugin_config():
-            logger.error(err)
-            return
-        self._generate_signed_certificate(event.certificate_signing_request, event.relation_id)
 
     @abstractmethod
     def _validate_plugin_config(self) -> str:
@@ -222,19 +209,9 @@ class AcmeClient(CharmBase):
             return "Invalid ACME server"
         return ""
 
-    @staticmethod
-    def _get_subject_from_csr(certificate_signing_request: str) -> str:
-        """Return subject from a provided CSR."""
-        csr = x509.load_pem_x509_csr(certificate_signing_request.encode())
-        subject_value = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-        if isinstance(subject_value, bytes):
-            return subject_value.decode()
-        else:
-            return str(subject_value)
-
-    def _push_csr_to_workload(self, csr: str) -> None:
+    def _push_csr_to_workload(self, csr: CertificateSigningRequest) -> None:
         """Push CSR to workload container."""
-        self._container.push(path=self._csr_path, make_dirs=True, source=csr.encode())
+        self._container.push(path=self._csr_path, make_dirs=True, source=str(csr))
 
     def _execute_lego_cmd(self) -> bool:
         """Execute lego command in workload container."""
@@ -261,7 +238,7 @@ class AcmeClient(CharmBase):
         chain_pem = self._container.pull(path=f"{self._certs_path}{csr_subject}.crt")
         return list(chain_pem.read().split("\n\n"))
 
-    def _generate_signed_certificate(self, csr: str, relation_id: int):
+    def _generate_signed_certificate(self, csr: CertificateSigningRequest, relation_id: int):
         """Generate signed certificate from the ACME provider."""
         if not self.unit.is_leader():
             logger.debug("Only the leader can handle certificate requests")
@@ -269,8 +246,7 @@ class AcmeClient(CharmBase):
         if not self._container.can_connect():
             logger.info("Container is not ready")
             return
-        csr_subject = self._get_subject_from_csr(csr)
-        logger.info("Received Certificate Creation Request for domain %s", csr_subject)
+        logger.info("Received Certificate Creation Request for domain %s", csr.common_name)
         self._push_csr_to_workload(csr=csr)
         if not self._execute_lego_cmd():
             logger.error(
@@ -278,25 +254,27 @@ class AcmeClient(CharmBase):
                 will try again in during the next update status event."
             )
             return
-        if not (signed_certificates := self._pull_certificates_from_workload(csr_subject)):
+        if not (signed_certificates := self._pull_certificates_from_workload(csr.common_name)):
             logger.error(
                 "Failed to pull certificates from workload \
                 will try again in during the next update status event."
             )
             return
         self.tls_certificates.set_relation_certificate(
-            certificate=signed_certificates[0],
-            certificate_signing_request=csr,
-            ca=signed_certificates[-1],
-            chain=list(reversed(signed_certificates)),
-            relation_id=relation_id,
+            provider_certificate=ProviderCertificate(
+                certificate=Certificate.from_string(signed_certificates[0]),
+                certificate_signing_request=csr,
+                ca=Certificate.from_string(signed_certificates[-1]),
+                chain=[Certificate.from_string(cert) for cert in reversed(signed_certificates)],
+                relation_id=relation_id,
+            ),
         )
 
     def _get_issuing_ca_certificates(self) -> Set[str]:
         """Get a list of the CA certificates that have been used with the issued certs."""
         return {
-            provider_certificate.ca
-            for provider_certificate in self.tls_certificates.get_provider_certificates()
+            str(provider_certificate.ca)
+            for provider_certificate in self.tls_certificates._get_provider_certificates()
         }
 
     def _get_certificate_fulfillment_status(self) -> str:
@@ -304,7 +282,8 @@ class AcmeClient(CharmBase):
         outstanding_requests_num = len(
             self.tls_certificates.get_outstanding_certificate_requests()
         )
-        total_requests_num = len(self.tls_certificates.get_requirer_csrs())
+        total_requests_num = len(self.tls_certificates.get_certificate_requests())
+        print(total_requests_num, outstanding_requests_num)
         fulfilled_certs = total_requests_num - outstanding_requests_num
         return f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
 

@@ -311,9 +311,7 @@ class TestCharm(unittest.TestCase):
         assert self.harness.charm.unit.status == BlockedStatus("Invalid email address")
 
     @patch("ops.model.Container.exec", new=MockExec)
-    @patch(
-        f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate",
-    )
+    @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate", new=Mock)
     @patch(
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
     )
@@ -324,7 +322,6 @@ class TestCharm(unittest.TestCase):
         self,
         patch_get_certificate_requests,
         patch_get_outstanding_certificate_requests,
-        mock_set_relation_certificate,
     ):
         self.harness.set_leader(False)
         self.harness.update_config(

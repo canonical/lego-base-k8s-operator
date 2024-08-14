@@ -98,23 +98,6 @@ class TestCharm(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
-    def add_csr_to_remote_unit_relation_data(
-        self, relation_id: int, app_or_unit: str, common_name: str = "foo"
-    ) -> str:
-        """Add a CSR to the remote unit relation data.
-
-        Returns: The CSR as a string.
-        """
-        csr = generate_csr(generate_private_key(), common_name=common_name)
-        self.harness.update_relation_data(
-            relation_id=relation_id,
-            app_or_unit=app_or_unit,
-            key_values={
-                "certificate_signing_requests": json.dumps([{"certificate_signing_request": csr}])
-            },
-        )
-        return csr
-
     def test_given_email_address_not_provided_when_update_config_then_status_is_blocked(
         self,
     ):
@@ -262,8 +245,14 @@ class TestCharm(unittest.TestCase):
         )
 
         with self.assertLogs(level="ERROR") as log:
-            self.add_csr_to_remote_unit_relation_data(
-                relation_id=relation_id, app_or_unit="remote/0"
+            self.harness.update_relation_data(
+                relation_id=relation_id,
+                app_or_unit="remote/0",
+                key_values={
+                    "certificate_signing_requests": json.dumps(
+                        [{"certificate_signing_request": csr}]
+                    )
+                },
             )
             assert "Failed to execute lego command" in log.output[1]
 
@@ -280,8 +269,6 @@ class TestCharm(unittest.TestCase):
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", False)
-
-        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
         self.harness.evaluate_status()
 
@@ -303,8 +290,6 @@ class TestCharm(unittest.TestCase):
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
         self.harness.add_relation_unit(relation_id, "remote/0")
         self.harness.set_can_connect("lego", True)
-
-        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
         self.harness.evaluate_status()
 
@@ -348,8 +333,6 @@ class TestCharm(unittest.TestCase):
         ]
         self.harness.set_can_connect("lego", True)
         self.harness.charm.valid_config = True
-
-        self.add_csr_to_remote_unit_relation_data(relation_id=relation_id, app_or_unit="remote/0")
 
         self.harness.evaluate_status()
 

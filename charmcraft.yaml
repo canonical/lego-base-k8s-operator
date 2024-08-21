@@ -26,3 +26,4 @@ parts:
       - rustc
       - cargo
       - pkg-config
+      - golang-go

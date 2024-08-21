@@ -8,6 +8,11 @@ certificates to other charms in the charm ecosystem. The certificate requesting 
 and the distribution of issued certificates are all done by the Charm class that's provided
 in this metaclass, which users can inherit to get all of its functionality.
 
+LEGO uses a DNS challenge to verify that users own the domains they are requesting certificates
+for. LEGO provides plugins that integrate with online services like Cloudflare directly
+to complete this challenge. Users can choose any supported plugin to easily integrate their
+ACME provider charms with their preferred domain provider.
+
 Some configuration by the inheriting charm is required.
 
 ## Getting Started

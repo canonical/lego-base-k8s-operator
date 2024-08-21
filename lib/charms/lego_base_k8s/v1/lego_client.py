@@ -48,10 +48,10 @@ config:
       default: "https://acme-v02.api.letsencrypt.org/directory"
     <plugin-name>-config-secret-id:
       type: string
-      description: The secret id of the secret that contains all of the configuration options
-        required to get a certificate. The secret should be in key-value form, with the keys
-        being the environment variables in lowercase kebab-case, and the values being the values
-        that are required for Lego.
+      description: The secret id of the Juju secret that contains all of the configuration
+        options required to get a certificate. The secret keys should mirror the environment
+        variables required by the plugin in lowercase kebab-case, and the values being
+        the values that are required to be provided by the LEGO plugin that will be in use.
 
         For example, the required variables for Cloudflare is documented in https://go-acme.github.io/lego/dns/cloudflare/index.html
         The format for the secret of a cloudflare plugin should be

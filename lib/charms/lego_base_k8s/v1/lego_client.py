@@ -256,7 +256,7 @@ class AcmeClient(CharmBase):
                     )
 
     def _configure_ca_certificates(self):
-        """Distribute all used CA certificates to requirers."""
+        """Distribute all used issuer certificates to requirers."""
         if len(self.model.relations.get(CA_TRANSFER_RELATION_NAME, [])) > 0:
             self.cert_transfer.add_certificates(
                 {

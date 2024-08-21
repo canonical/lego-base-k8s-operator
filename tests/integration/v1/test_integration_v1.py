@@ -56,7 +56,7 @@ async def test_build_and_deploy(ops_test):
     )
     await ops_test.model.grant_secret(secret_name="test-credentials", application=APP_NAME)
     await ops_test.model.applications[APP_NAME].set_config(
-        {"test-config-secret": secret.split(":")[-1]}
+        {"test-config-secret-id": secret.split(":")[-1]}
     )
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],

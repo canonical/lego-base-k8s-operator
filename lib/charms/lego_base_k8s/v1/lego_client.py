@@ -358,7 +358,7 @@ class AcmeClient(CharmBase):
     def _plugin_config(self) -> Dict[str, str]:
         """Plugin specific additional configuration for the command.
 
-        Will attempt to access the juju secret named <plugin_name>-config-secret,
+        Will attempt to access the juju secret named <plugin_name>-config-secret-id,
         convert lowercase, kebab-style to uppercase, snake_case, and return all of them
         as a dictionary. Ex:
 
@@ -375,7 +375,7 @@ class AcmeClient(CharmBase):
         """
         try:
             plugin_config_secret_id = str(
-                self.model.config.get(f"{self._plugin}-config-secret", "")
+                self.model.config.get(f"{self._plugin}-config-secret-id", "")
             )
             if not plugin_config_secret_id:
                 return {}

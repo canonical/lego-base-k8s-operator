@@ -48,6 +48,6 @@ config:
       type: string
       description: The ACME server URL.
       default: "https://acme-staging-v02.api.letsencrypt.org/directory"
-    test-config-secret:
+    test-config-secret-id:
       type: string
       description: The secret id of the secret that contains all of the configuration options required to get a certificate.

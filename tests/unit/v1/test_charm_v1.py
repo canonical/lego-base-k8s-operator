@@ -72,7 +72,7 @@ class TestCharmV1(unittest.TestCase):
                             "description": "lego-image",
                             "type": "string",
                         },
-                        "example-config-secret": {
+                        "example-config-secret-id": {
                             "description": "lego-image",
                             "type": "string",
                         },
@@ -132,7 +132,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "invalid email",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
         self.harness.evaluate_status()
@@ -144,7 +144,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "example@email.com",
                 "server": "Invalid ACME server",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
         self.harness.evaluate_status()
@@ -156,7 +156,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
@@ -173,7 +173,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
@@ -197,7 +197,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
@@ -276,7 +276,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
 
@@ -313,7 +313,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
 
@@ -340,7 +340,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
 
@@ -392,7 +392,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
 
@@ -427,7 +427,7 @@ class TestCharmV1(unittest.TestCase):
             {
                 "email": "banana@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
-                "example-config-secret": id,
+                "example-config-secret-id": id,
             }
         )
 

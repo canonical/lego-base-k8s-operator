@@ -79,6 +79,12 @@ parts:
   charm:
     build-snaps:
       - go
+    build-packages:
+      - libffi-dev
+      - libssl-dev
+      - rustc
+      - cargo
+      - pkg-config
 ```
 
 Then, to use the library in an example charm, you can do something like the following:

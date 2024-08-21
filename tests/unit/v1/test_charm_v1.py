@@ -93,7 +93,7 @@ class TestCharmV1(unittest.TestCase):
         self.harness.set_leader(False)
         self.harness.evaluate_status()
         assert self.harness.model.unit.status == BlockedStatus(
-            "only 1 leader unit can operate at any given time"
+            "this charm does not scale, only the leader unit manages certificates."
         )
 
     def test_given_email_address_not_provided_when_update_config_then_status_is_blocked(self):

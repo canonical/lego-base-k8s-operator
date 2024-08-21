@@ -205,7 +205,11 @@ class AcmeClient(CharmBase):
     def _on_collect_status(self, event: CollectStatusEvent) -> None:
         """Handle the collect status event."""
         if not self.unit.is_leader():
-            event.add_status(BlockedStatus("only 1 leader unit can operate at any given time"))
+            event.add_status(
+                BlockedStatus(
+                    "this charm does not scale, only the leader unit manages certificates."
+                )
+            )
             return
         if err := self._validate_charm_config_options():
             event.add_status(BlockedStatus(err))

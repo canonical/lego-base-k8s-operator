@@ -9,23 +9,18 @@ from unittest.mock import Mock, patch
 import yaml
 from charms.lego_base_k8s.v1.lego_client import AcmeClient
 from charms.tls_certificates_interface.v4.tls_certificates import (
-    Certificate,
-    CertificateSigningRequest,
     ProviderCertificate,
     RequirerCSR,
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
 )
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 from pylego import LEGOError, LEGOResponse
 from pylego.pylego import Metadata
-
-from tests.unit.v1.certificates_helpers import (
-    generate_ca,
-    generate_certificate,
-    generate_csr,
-    generate_private_key,
-)
 
 testing.SIMULATE_CAN_CONNECT = True  # type: ignore[attr-defined]
 test_cert = Path(__file__).parent / "test_lego.crt"
@@ -204,14 +199,14 @@ class TestCharmV1(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
 
         csr_pk_1 = generate_private_key()
-        csr_1 = CertificateSigningRequest.from_string(generate_csr(csr_pk_1, "foo.com"))
+        csr_1 = generate_csr(csr_pk_1, "foo.com")
 
         csr_pk_2 = generate_private_key()
-        csr_2 = CertificateSigningRequest.from_string(generate_csr(csr_pk_2, "bar.com"))
+        csr_2 = generate_csr(csr_pk_2, "bar.com")
 
         issuer_pk = generate_private_key()
-        issuer = Certificate.from_string(generate_ca(issuer_pk, common_name="ca", validity=365))
-        cert = Certificate.from_string(generate_certificate(str(csr_1), str(issuer), issuer_pk))
+        issuer = generate_ca(issuer_pk, common_name="ca", validity=365)
+        cert = generate_certificate(csr_1, issuer, issuer_pk, 365)
         chain = [cert, issuer]
 
         mock_get_certificate_requests.return_value = [
@@ -253,10 +248,10 @@ class TestCharmV1(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
 
         csr_pk = generate_private_key()
-        csr = CertificateSigningRequest.from_string(generate_csr(csr_pk, "foo.com"))
+        csr = generate_csr(csr_pk, "foo.com")
         issuer_pk = generate_private_key()
-        issuer = Certificate.from_string(generate_ca(issuer_pk, common_name="ca", validity=365))
-        cert = Certificate.from_string(generate_certificate(str(csr), str(issuer), issuer_pk))
+        issuer = generate_ca(issuer_pk, common_name="ca", validity=365)
+        cert = generate_certificate(csr, issuer, issuer_pk, validity=365)
         chain = [cert, issuer]
 
         mock_get_outstanding_certificate_requests.return_value = [
@@ -265,7 +260,7 @@ class TestCharmV1(unittest.TestCase):
 
         mock_pylego.return_value = LEGOResponse(
             csr=str(csr),
-            private_key=generate_private_key(),
+            private_key=str(generate_private_key()),
             certificate=str(cert),
             issuer_certificate=str(issuer),
             metadata=Metadata(stable_url="stable url", url="url", domain="domain.com"),
@@ -300,7 +295,7 @@ class TestCharmV1(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
 
         csr_pk = generate_private_key()
-        csr = CertificateSigningRequest.from_string(generate_csr(csr_pk, "foo.com"))
+        csr = generate_csr(csr_pk, "foo.com")
 
         mock_get_certificate_requests.return_value = [
             RequirerCSR(relation_id=relation_id, certificate_signing_request=csr)
@@ -348,10 +343,10 @@ class TestCharmV1(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
 
         csr_pk = generate_private_key()
-        csr = CertificateSigningRequest.from_string(generate_csr(csr_pk, "foo.com"))
+        csr = generate_csr(csr_pk, "foo.com")
         issuer_pk = generate_private_key()
-        issuer = Certificate.from_string(generate_ca(issuer_pk, common_name="ca", validity=365))
-        cert = Certificate.from_string(generate_certificate(str(csr), str(issuer), issuer_pk))
+        issuer = generate_ca(issuer_pk, common_name="ca", validity=365)
+        cert = generate_certificate(csr, issuer, issuer_pk, 365)
 
         mock_get_certificate_requests.return_value = [
             RequirerCSR(
@@ -362,7 +357,7 @@ class TestCharmV1(unittest.TestCase):
 
         mock_pylego.return_value = LEGOResponse(
             csr=str(csr),
-            private_key=generate_private_key(),
+            private_key=str(generate_private_key()),
             certificate=str(cert),
             issuer_certificate=str(issuer),
             metadata=Metadata(stable_url="stable url", url="url", domain="domain.com"),
@@ -408,16 +403,16 @@ class TestCharmV1(unittest.TestCase):
         csr = generate_csr(private_key, "foo.com")
 
         server_private_key = generate_private_key()
-        ca = generate_ca(server_private_key, "ca.com", 365)
+        ca = generate_ca(server_private_key, 365, "ca.com")
         certificate = generate_certificate(csr, ca, server_private_key, 365)
 
         mock_get_provider_certificates.return_value = [
             ProviderCertificate(
                 relation_id=0,
-                certificate_signing_request=CertificateSigningRequest.from_string(csr),
-                certificate=Certificate.from_string(certificate),
-                ca=Certificate.from_string(ca),
-                chain=[Certificate.from_string(ca)],
+                certificate_signing_request=csr,
+                certificate=certificate,
+                ca=ca,
+                chain=[ca],
                 revoked=False,
             )
         ]
@@ -435,4 +430,4 @@ class TestCharmV1(unittest.TestCase):
 
         self.harness.charm.on.config_changed.emit()
 
-        mock_add_certificates.assert_called_with({ca})
+        mock_add_certificates.assert_called_with({str(ca)})

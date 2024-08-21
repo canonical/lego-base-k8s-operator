@@ -87,11 +87,11 @@ parts:
       - pkg-config
 ```
 
-Then, to use the library in an example charm, you can do something like the following:
+Then, to use the library in an example charm, you can do the following:
 ```python
 from charms.lego_client_operator.v1.lego_client import AcmeClient
 from ops.main import main
-class ExampleAcmeCharm(AcmeClient):
+class CloudflareLEGOCharm(AcmeClient):
     def __init__(self, *args):
         super().__init__(*args, plugin="cloudflare")
         self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
@@ -105,7 +105,7 @@ class ExampleAcmeCharm(AcmeClient):
         return ""
 ```
 
-The minimum that Charms such as the above example are expected to do is:
+LEGO Charms are expected to:
 - Inherit from AcmeClient,
 - Call `super().__init__(*args, plugin="<plugin-name>")` with the lego plugin name,
   you can look at the list of plugins at https://go-acme.github.io/lego/dns/index.html#dns-providers
@@ -120,11 +120,11 @@ The minimum that Charms such as the above example are expected to do is:
 
 
 Once the charm is deployed, the user requesting a certificate is expected to:
-- Pass in an email as a config option
-- Optionally pass in an ACME server as config option
-- Create a secret that contains all of the required configuration options for the plugin.
-- Grant this secret to the charm.
-- Pass in the secret id that was generated as a config option.
+- Pass in an email as a config option: `juju config lego-operator email=example@email.com`
+- Optionally pass in an ACME server as config option: `juju config lego-operator server=https://acme-staging-v02.api.letsencrypt.org/directory`
+- Create a secret that contains all of the required configuration options for the plugin.: `juju add-secret lego-credentials cloudflare-email=my@email.com cloudflare-api-key="apikey123"`
+- Grant this secret to the charm: `juju grant-secret lego-credentials lego-operator`
+- Pass in the secret id that was generated as a config option: `juju config lego-operator cloudflare-config-secret-id=<secret-id>`
 
 The user is then free to integrate the charm with any requirer implementing the tls-certificates-interface.
 The LEGO charm will simply forward all of the CSR's to the letsencrypt client, and will log any error that may occur.

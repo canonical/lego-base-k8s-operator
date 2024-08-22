@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 
@@ -12,12 +12,12 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("tests/integration/lego-operator/charmcraft.yaml").read_text())
+METADATA = yaml.safe_load(Path("tests/integration/v1/lego-operator/charmcraft.yaml").read_text())
 APP_NAME = METADATA["name"]
 TLS_LIB_PATH = "lib/charms/tls_certificates_interface/v4/tls_certificates.py"
 LOKI_LIB_PATH = "lib/charms/loki_k8s/v1/loki_push_api.py"
-LEGO_CLIENT_LIB_PATH = "lib/charms/lego_base_k8s/v0/lego_client.py"
-LEGO_OPERATOR_DIR = "tests/integration/lego-operator"
+LEGO_CLIENT_LIB_PATH = "lib/charms/lego_base_k8s/v1/lego_client.py"
+LEGO_OPERATOR_DIR = "tests/integration/v1/lego-operator"
 GRAFANA_AGENT_CHARM_NAME = "grafana-agent-k8s"
 
 
@@ -34,10 +34,9 @@ async def test_build_and_deploy(ops_test):
     Assert on the unit status before any relations/configurations take place.
     """
     copy_lib_content()
-    charm = await ops_test.build_charm("tests/integration/lego-operator")
+    charm = await ops_test.build_charm("tests/integration/v1/lego-operator")
     await ops_test.model.deploy(
         entity_url=charm,
-        resources={"lego-image": METADATA["resources"]["lego-image"]["upstream-source"]},
         application_name=APP_NAME,
         config={
             "email": "example@gmail.com",
@@ -48,8 +47,21 @@ async def test_build_and_deploy(ops_test):
 
     await ops_test.model.wait_for_idle(
         apps=[APP_NAME],
+        status="blocked",
+        raise_on_error=True,
+        timeout=1000,
+    )
+    secret = await ops_test.model.add_secret(
+        "test-credentials", data_args=["username=me", "apikey=ak"]
+    )
+    await ops_test.model.grant_secret(secret_name="test-credentials", application=APP_NAME)
+    await ops_test.model.applications[APP_NAME].set_config(
+        {"test-config-secret-id": secret.split(":")[-1]}
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
         status="active",
-        raise_on_blocked=True,
+        raise_on_error=True,
         timeout=1000,
     )
     assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"

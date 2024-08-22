@@ -1,6 +1,5 @@
 ops
-jsonschema
 cryptography
 cosl
 pylego
-rpds-py==0.20.0
+rpds-py==0.18.0

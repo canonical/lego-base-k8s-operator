@@ -20,7 +20,7 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.pebble import ExecError
 from ops.testing import Harness
 
-from tests.unit.certificates_helpers import (
+from tests.unit.v0.certificates_helpers import (
     generate_ca,
     generate_certificate,
     generate_csr,
@@ -64,7 +64,7 @@ class AcmeTestCharm(AcmeClient):
         return {}
 
 
-class TestCharm(unittest.TestCase):
+class TestCharmV0(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(
             AcmeTestCharm,

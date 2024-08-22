@@ -21,8 +21,6 @@ from pylego import LEGOError, LEGOResponse
 from pylego.pylego import Metadata
 from scenario import Context, Relation, Secret, State
 
-testing.SIMULATE_CAN_CONNECT = True  # type: ignore[attr-defined]
-test_cert = Path(__file__).parent / "test_lego.crt"
 TLS_LIB_PATH = "charms.tls_certificates_interface.v4.tls_certificates"
 CERT_TRANSFER_LIB_PATH = "charms.certificate_transfer_interface.v1.certificate_transfer"
 CERTIFICATES_RELATION_NAME = "certificates"

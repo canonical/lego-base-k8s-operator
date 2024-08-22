@@ -78,7 +78,7 @@ requires:
 parts:
   charm:
     build-snaps:
-      - go
+      - go/1.23/stable
     build-packages:
       - libffi-dev
       - libssl-dev

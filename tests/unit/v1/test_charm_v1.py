@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -15,7 +14,6 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
-from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
 from pylego import LEGOError, LEGOResponse
 from pylego.pylego import Metadata
@@ -31,10 +29,9 @@ class AcmeTestCharm(AcmeClient):
     def __init__(self, *args):
         """Use the AcmeClient library to manage events."""
         super().__init__(*args, plugin="example")
-        self.valid_config = True
 
     def _validate_plugin_config_options(self, plugin_config: dict[str, str]) -> str:
-        if not self.valid_config:
+        if "API_KEY" not in plugin_config:
             return "invalid plugin configuration"
         return ""
 
@@ -137,7 +134,7 @@ class TestCharmV1:
     def test_given_invalid_plugin_config_when_update_status_then_status_is_blocked(self):
         state = State(
             leader=True,
-            secrets=[Secret(id="1", contents={0: {"api-key": "apikey123"}})],
+            secrets=[Secret(id="1", contents={0: {"wrong-api-key": "apikey123"}})],
             config={
                 "email": "example@email.com",
                 "server": "https://acme-v02.api.letsencrypt.org/directory",
@@ -145,10 +142,8 @@ class TestCharmV1:
             },
             relations=[Relation(endpoint=CERTIFICATES_RELATION_NAME)],
         )
-        with self.ctx.manager("collect-unit-status", state) as manager:
-            manager.charm.valid_config = False  # type: ignore
-            out = manager.run()
-            assert out.unit_status == BlockedStatus("invalid plugin configuration")
+        out = self.ctx.run("collect-unit-status", state)
+        assert out.unit_status == BlockedStatus("invalid plugin configuration")
 
     def test_given_valid_specific_config_when_update_status_then_status_is_active(self):
         state = State(

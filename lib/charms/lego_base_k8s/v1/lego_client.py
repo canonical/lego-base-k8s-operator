@@ -98,9 +98,9 @@ class CloudflareLEGOCharm(AcmeClient):
         self._email = "testingmctestface@test.com"
 
     def _validate_plugin_config_options(self, plugin_config: Dict[str, str]) -> str:
-        if "cloudflare-email" not in plugin_config:
+        if "CLOUDFLARE_EMAIL" not in plugin_config:
             return "API user was not provided"
-        if "cloudflare-api-key" not in plugin_config:
+        if "CLOUDFLARE_API_KEY" not in plugin_config:
             return "API key was not provided"
         return ""
 ```

@@ -12,7 +12,7 @@ attrs==23.2.0
     #   referencing
 cffi==1.16.0
     # via cryptography
-cosl==0.0.21
+cosl==0.0.23
     # via -r requirements.in
 cryptography==43.0.0
     # via -r requirements.in
@@ -30,7 +30,7 @@ pydantic==2.8.2
     # via cosl
 pydantic-core==2.20.1
     # via pydantic
-pylego==0.1.5
+pylego==0.1.7
     # via -r requirements.in
 pyyaml==6.0.1
     # via
@@ -45,6 +45,8 @@ rpds-py==0.20.0
     #   -r requirements.in
     #   jsonschema
     #   referencing
+tenacity==9.0.0
+    # via cosl
 typing-extensions==4.12.2
     # via
     #   cosl

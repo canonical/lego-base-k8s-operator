@@ -12,12 +12,10 @@ cachetools==5.5.0
     # via google-auth
 certifi==2024.8.30
     # via
-    #   -c requirements.txt
     #   kubernetes
     #   requests
 cffi==1.17.1
     # via
-    #   -c requirements.txt
     #   cryptography
     #   pynacl
 charset-normalizer==3.3.2
@@ -27,9 +25,7 @@ codespell==2.3.0
 coverage[toml]==7.6.1
     # via -r test-requirements.in
 cryptography==43.0.1
-    # via
-    #   -c requirements.txt
-    #   paramiko
+    # via paramiko
 decorator==5.1.1
     # via
     #   ipdb
@@ -41,9 +37,7 @@ google-auth==2.34.0
 hvac==2.3.0
     # via juju
 idna==3.10
-    # via
-    #   -c requirements.txt
-    #   requests
+    # via requests
 iniconfig==2.0.0
     # via pytest
 ipdb==0.13.13
@@ -74,11 +68,9 @@ oauthlib==3.2.2
     # via
     #   kubernetes
     #   requests-oauthlib
-ops==2.16.1
-    # via
-    #   -c requirements.txt
-    #   ops-scenario
-ops-scenario==6.1.6
+ops==2.16.0
+    # via ops-scenario
+ops-scenario==6.1.7
     # via -r test-requirements.in
 packaging==24.1
     # via
@@ -108,9 +100,7 @@ pyasn1==0.6.1
 pyasn1-modules==0.4.1
     # via google-auth
 pycparser==2.22
-    # via
-    #   -c requirements.txt
-    #   cffi
+    # via cffi
 pygments==2.18.0
     # via ipython
 pymacaroons==0.13.0
@@ -143,7 +133,6 @@ pytz==2024.2
     # via pyrfc3339
 pyyaml==6.0.2
     # via
-    #   -c requirements.txt
     #   juju
     #   kubernetes
     #   ops
@@ -177,9 +166,7 @@ traitlets==5.14.3
     #   ipython
     #   matplotlib-inline
 typing-extensions==4.12.2
-    # via
-    #   -c requirements.txt
-    #   typing-inspect
+    # via typing-inspect
 typing-inspect==0.9.0
     # via juju
 urllib3==2.2.3
@@ -190,7 +177,6 @@ wcwidth==0.2.13
     # via prompt-toolkit
 websocket-client==1.8.0
     # via
-    #   -c requirements.txt
     #   kubernetes
     #   ops
 websockets==13.0.1

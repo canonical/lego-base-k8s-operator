@@ -20,7 +20,7 @@ cffi==1.17.1
     # via cryptography
 cosl==0.0.45
     # via -r requirements.in
-cryptography==43.0.3
+cryptography==44.0.0
     # via -r requirements.in
 h11==0.14.0
     # via httpcore
@@ -61,7 +61,7 @@ referencing==0.35.1
     # via
     #   jsonschema
     #   jsonschema-specifications
-rpds-py==0.21.0
+rpds-py==0.22.0
     # via
     #   -r requirements.in
     #   jsonschema

@@ -3,4 +3,4 @@ jsonschema
 cryptography
 cosl
 pylego
-rpds-py==0.22.0
+rpds-py==0.22.3

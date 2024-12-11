@@ -225,7 +225,7 @@ class AcmeClient(CharmBase):
         )
         try:
             stdout, error = process.wait_output()
-            logger.info(f"Return message: {stdout}, {error}")
+            logger.info("Return message: %s, %s", stdout, error)
         except ExecError as e:
             logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():  # type: ignore

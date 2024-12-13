@@ -4,6 +4,8 @@
 
 """Dummy charm for integration testing."""
 
+from typing import Any
+
 from charms.lego_base_k8s.v1.lego_client import AcmeClient
 from ops.main import main
 
@@ -11,7 +13,7 @@ from ops.main import main
 class LegoOperator(AcmeClient):
     """Dummy charm for integration testing."""
 
-    def __init__(self, *args):
+    def __init__(self, *args: Any):
         super().__init__(*args, plugin="test")
 
     def _validate_plugin_config_options(self, plugin_config: dict[str, str]) -> str:

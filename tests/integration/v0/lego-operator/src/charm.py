@@ -4,7 +4,7 @@
 
 """Dummy charm for integration testing."""
 
-from typing import Dict
+from typing import Any, Dict
 
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
 from ops.main import main
@@ -13,7 +13,7 @@ from ops.main import main
 class LegoOperator(AcmeClient):
     """Dummy charm for integration testing."""
 
-    def __init__(self, *args):
+    def __init__(self, *args: Any):
         """Use the Orc8rBase library to manage events."""
         super().__init__(*args, plugin="whatever")
 

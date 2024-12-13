@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +29,12 @@ def copy_lib_content() -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test):
+async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm-under-test and deploy it together with related charms.
 
     Assert on the unit status before any relations/configurations take place.
     """
+    assert ops_test.model
     copy_lib_content()
     charm = await ops_test.build_charm("tests/integration/v0/lego-operator")
     await ops_test.model.deploy(
@@ -56,8 +58,9 @@ async def test_build_and_deploy(ops_test):
 
 
 @pytest.mark.abort_on_fail
-async def test_given_grafana_agent_when_integrate_then_status_is_active(ops_test):
+async def test_given_grafana_agent_when_integrate_then_status_is_active(ops_test: OpsTest):
     """Integrate with a logging endpoint."""
+    assert ops_test.model
     await ops_test.model.deploy(
         GRAFANA_AGENT_CHARM_NAME,
         application_name=GRAFANA_AGENT_CHARM_NAME,

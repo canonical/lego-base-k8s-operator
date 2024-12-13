@@ -77,7 +77,7 @@ import logging
 import os
 import re
 from abc import abstractmethod
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from urllib.parse import urlparse
 
 from charms.certificate_transfer_interface.v1.certificate_transfer import (
@@ -120,7 +120,7 @@ class AcmeClient(CharmBase):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, *args, plugin: str):
+    def __init__(self, *args: Any, plugin: str):
         super().__init__(*args)
         self._csr_path = "/tmp/csr.pem"
         self._certs_path = "/tmp/.lego/certificates/"

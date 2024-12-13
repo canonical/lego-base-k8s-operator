@@ -5,7 +5,8 @@
 import json
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 import yaml
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
@@ -36,20 +37,20 @@ CA_TRANSFER_RELATION_NAME = "send-ca-cert"
 
 
 class MockExec:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         if "raise_exec_error" in kwargs:
             self.raise_exec_error = True
         else:
             self.raise_exec_error = False
 
-    def wait_output(self, *args, **kwargs):
+    def wait_output(self, *args: Any, **kwargs: Any):
         if self.raise_exec_error:
             raise ExecError(command=["lego"], exit_code=1, stdout="", stderr="")
         return "stdout", "stderr"
 
 
 class AcmeTestCharm(AcmeClient):
-    def __init__(self, *args):
+    def __init__(self, *args: Any):
         """Use the AcmeClient library to manage events."""
         super().__init__(*args, plugin="namecheap")
         self.valid_config = True
@@ -173,7 +174,9 @@ class TestCharmV0(unittest.TestCase):
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate",
     )
     def test_given_cmd_when_certificate_creation_request_then_certificate_is_set_in_relation(
-        self, mock_set_relation_certificate, mock_get_outstanding_certificate_requests
+        self,
+        mock_set_relation_certificate: MagicMock,
+        mock_get_outstanding_certificate_requests: MagicMock,
     ):
         self.harness.set_leader(True)
         relation_id = self.harness.add_relation(CERTIFICATES_RELATION_NAME, "remote")
@@ -218,7 +221,7 @@ class TestCharmV0(unittest.TestCase):
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
     )
     def test_given_command_execution_fails_when_certificate_creation_request_then_request_fails(  # noqa: E501
-        self, patch_get_outstanding_certificate_requests, patch_exec
+        self, mock_get_outstanding_certificate_requests: MagicMock, mock_exec: MagicMock
     ):
         self.harness.update_config(
             {
@@ -231,14 +234,14 @@ class TestCharmV0(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
-        patch_get_outstanding_certificate_requests.return_value = [
+        mock_get_outstanding_certificate_requests.return_value = [
             RequirerCSR(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
             )
         ]
         self.harness.set_can_connect("lego", True)
-        patch_exec.return_value = MockExec(raise_exec_error=True)
+        mock_exec.return_value = MockExec(raise_exec_error=True)
         container = self.harness.model.unit.get_container("lego")
         container.push(
             "/tmp/.lego/certificates/foo.crt", source=test_cert.read_bytes(), make_dirs=True
@@ -305,8 +308,8 @@ class TestCharmV0(unittest.TestCase):
     )
     def test_given_valid_config_and_pending_requests_when_update_status_then_status_is_active(  # noqa: E501
         self,
-        patch_get_certificate_requests,
-        patch_get_outstanding_certificate_requests,
+        mock_get_certificate_requests: MagicMock,
+        mock_get_outstanding_certificate_requests: MagicMock,
     ):
         self.harness.set_leader(False)
         self.harness.update_config(
@@ -319,13 +322,13 @@ class TestCharmV0(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
-        patch_get_certificate_requests.return_value = [
+        mock_get_certificate_requests.return_value = [
             RequirerCSR(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
             )
         ]
-        patch_get_outstanding_certificate_requests.return_value = [
+        mock_get_outstanding_certificate_requests.return_value = [
             RequirerCSR(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
@@ -453,7 +456,9 @@ class TestCharmV0(unittest.TestCase):
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
     )
     def test_given_cmd_and_outstanding_requests_when_update_status_then_certificate_is_set_in_relation(  # noqa: E501
-        self, patch_get_outstanding_certificate_requests, mock_set_relation_certificate
+        self,
+        mock_get_outstanding_certificate_requests: MagicMock,
+        mock_set_relation_certificate: MagicMock,
     ):
         self.harness.update_config(
             {
@@ -466,7 +471,7 @@ class TestCharmV0(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
-        patch_get_outstanding_certificate_requests.return_value = [
+        mock_get_outstanding_certificate_requests.return_value = [
             RequirerCSR(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
@@ -503,7 +508,9 @@ class TestCharmV0(unittest.TestCase):
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_outstanding_certificate_requests",
     )
     def test_given_cmd_and_outstanding_requests_when_config_changed_then_certificate_is_set_in_relation(  # noqa: E501
-        self, patch_get_outstanding_certificate_requests, mock_set_relation_certificate
+        self,
+        mock_get_outstanding_certificate_requests: MagicMock,
+        mock_set_relation_certificate: MagicMock,
     ):
         self.harness.update_config(
             {
@@ -516,7 +523,7 @@ class TestCharmV0(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
-        patch_get_outstanding_certificate_requests.return_value = [
+        mock_get_outstanding_certificate_requests.return_value = [
             RequirerCSR(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
@@ -562,9 +569,9 @@ class TestCharmV0(unittest.TestCase):
     )
     def test_given_cmd_when_app_environment_variables_set_then_command_executed_with_environment_variables(  # noqa: E501
         self,
-        patch_get_outstanding_certificate_requests,
+        mock_get_outstanding_certificate_requests: MagicMock,
         _,
-        mock_exec,
+        mock_exec: MagicMock,
     ):
         self.harness.update_config(
             {
@@ -578,7 +585,7 @@ class TestCharmV0(unittest.TestCase):
         self.harness.add_relation_unit(relation_id, "remote/0")
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
-        patch_get_outstanding_certificate_requests.return_value = [
+        mock_get_outstanding_certificate_requests.return_value = [
             RequirerCSR(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
@@ -619,7 +626,7 @@ class TestCharmV0(unittest.TestCase):
         f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates",
     )
     def test_given_cert_transfer_relation_not_created_then_ca_certificates_not_added_in_relation_data(  # noqa: E501
-        self, mock_add_certificates
+        self, mock_add_certificates: MagicMock
     ):
         self.harness.update_config(
             {
@@ -642,7 +649,7 @@ class TestCharmV0(unittest.TestCase):
         f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_provider_certificates",
     )
     def test_given_cert_transfer_relation_and_ca_certificates_then_ca_certificates_added_in_relation_data(  # noqa: E501
-        self, mock_get_provider_certificates, mock_add_certificates
+        self, mock_get_provider_certificates: MagicMock, mock_add_certificates: MagicMock
     ):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")

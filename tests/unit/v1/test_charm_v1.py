@@ -2,7 +2,8 @@
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
-from unittest.mock import Mock, patch
+from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from charms.lego_base_k8s.v1.lego_client import AcmeClient
@@ -26,7 +27,7 @@ CA_TRANSFER_RELATION_NAME = "send-ca-cert"
 
 
 class AcmeTestCharm(AcmeClient):
-    def __init__(self, *args):
+    def __init__(self, *args: Any):
         """Use the AcmeClient library to manage events."""
         super().__init__(*args, plugin="example")
 
@@ -164,7 +165,10 @@ class TestCharmV1:
     @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_provider_certificates")
     @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_certificate_requests")
     def test_given_valid_config_and_pending_requests_when_update_status_then_status_is_active(
-        self, mock_get_certificate_requests, mock_get_provider_certificates, mock_pylego
+        self,
+        mock_get_certificate_requests: MagicMock,
+        mock_get_provider_certificates: MagicMock,
+        mock_pylego: MagicMock,
     ):
         csr_pk_1 = generate_private_key()
         csr_1 = generate_csr(csr_pk_1, "foo.com")
@@ -219,7 +223,10 @@ class TestCharmV1:
     @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_certificate_requests")
     @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate")
     def test_given_cmd_when_certificate_creation_request_then_certificate_is_set_in_relation(
-        self, mock_set_relation_certificate, mock_get_outstanding_certificate_requests, mock_pylego
+        self,
+        mock_set_relation_certificate: MagicMock,
+        mock_get_outstanding_certificate_requests: MagicMock,
+        mock_pylego: MagicMock,
     ):
         csr_pk = generate_private_key()
         csr = generate_csr(csr_pk, "foo.com")
@@ -268,7 +275,10 @@ class TestCharmV1:
     @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_certificate_requests")
     @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.set_relation_certificate")
     def test_given_cmd_execution_fails_when_certificate_creation_request_then_request_fails(
-        self, mock_set_relation_certificate, mock_get_certificate_requests, mock_pylego
+        self,
+        mock_set_relation_certificate: MagicMock,
+        mock_get_certificate_requests: MagicMock,
+        mock_pylego: MagicMock,
     ):
         csr_pk = generate_private_key()
         csr = generate_csr(csr_pk, "foo.com")
@@ -308,8 +318,8 @@ class TestCharmV1:
     @patch("charms.lego_base_k8s.v1.lego_client.run_lego_command")
     def test_given_cmd_when_app_environment_variables_set_then_command_executed_with_environment_variables(  # noqa: E501
         self,
-        mock_pylego,
-        mock_get_certificate_requests,
+        mock_pylego: MagicMock,
+        mock_get_certificate_requests: MagicMock,
     ):
         csr_pk = generate_private_key()
         csr = generate_csr(csr_pk, "foo.com")
@@ -362,7 +372,7 @@ class TestCharmV1:
 
     @patch(f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates")
     def test_given_cert_transfer_relation_not_created_then_ca_certificates_not_added_in_relation_data(  # noqa: E501
-        self, mock_add_certificates
+        self, mock_add_certificates: MagicMock
     ):
         state = State(
             leader=True,
@@ -383,7 +393,7 @@ class TestCharmV1:
     @patch(f"{CERT_TRANSFER_LIB_PATH}.CertificateTransferProvides.add_certificates")
     @patch(f"{TLS_LIB_PATH}.TLSCertificatesProvidesV4.get_provider_certificates")
     def test_given_cert_transfer_relation_and_ca_certificates_then_ca_certificates_added_in_relation_data(  # noqa: E501
-        self, mock_get_provider_certificates, mock_add_certificates
+        self, mock_get_provider_certificates: MagicMock, mock_add_certificates: MagicMock
     ):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")

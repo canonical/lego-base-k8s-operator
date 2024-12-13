@@ -138,7 +138,7 @@ import os
 import re
 from abc import abstractmethod
 from contextlib import contextmanager
-from typing import Dict
+from typing import Any, Dict
 from urllib.parse import urlparse
 
 from charms.certificate_transfer_interface.v1.certificate_transfer import (
@@ -182,7 +182,7 @@ class AcmeClient(CharmBase):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, *args, plugin: str):
+    def __init__(self, *args: Any, plugin: str):
         super().__init__(*args)
         self._logging = LogForwarder(self, relation_name="logging")
         self.tls_certificates = TLSCertificatesProvidesV4(self, CERTIFICATES_RELATION_NAME)

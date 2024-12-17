@@ -21,14 +21,29 @@ this operator.
 
 ## Developing
 
-You can use the environments created by `tox` for development:
+This project uses `uv`. You can install it on Ubuntu with:
 
 ```shell
-tox --notest -e unit
-source .tox/unit/bin/activate
+sudo snap install --classic astral-uv
 ```
 
-### Testing
+You can create an environment for development with `uv`:
+
+```shell
+uv sync
+```
+
+## Testing
+
+This project uses `tox` for managing test environments. It can be installed
+with:
+
+```shell
+uv tool install tox --with tox-uv
+```
+
+There are some pre-configured environments that can be used for linting
+and formatting code when you're preparing contributions to the charm:
 
 ```shell
 tox -e fmt           # update your code according to linting rules

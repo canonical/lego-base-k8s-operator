@@ -15,6 +15,6 @@ To get started using the library, you need to fetch the library using `charmcraf
 ```shell
 charmcraft fetch-lib charms.lego_base_k8s.v0.lego_client
 ```
-You will also need to add the following library to the charm's `requirements.txt` file:
+You will also need to add the following library to the charm's dependencies:
 - jsonschema
 - cryptography

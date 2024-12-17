@@ -18,8 +18,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        run: sudo snap install --classic astral-uv
       - name: Install tox
-        run: pip install tox
+        run: uv tool install tox --with tox-uv
       - name: Run tests using tox
         run: tox -e lint
 
@@ -28,8 +30,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        run: sudo snap install --classic astral-uv
       - name: Install tox
-        run: pip install tox
+        run: uv tool install tox --with tox-uv
       - name: Run tests using tox
         run: tox -e static
 
@@ -38,8 +42,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        run: sudo snap install --classic astral-uv
       - name: Install tox
-        run: pip install tox
+        run: uv tool install tox --with tox-uv
       - name: Run tests using tox
         run: tox -e unit
 
@@ -48,8 +54,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        run: sudo snap install --classic astral-uv
       - name: Install tox
-        run: pip install tox
+        run: uv tool install tox --with tox-uv
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -77,8 +85,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+      - name: Install uv
+        run: sudo snap install --classic astral-uv
       - name: Install tox
-        run: pip install tox
+        run: uv tool install tox --with tox-uv
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:

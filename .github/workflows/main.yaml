@@ -15,7 +15,7 @@ concurrency:
 jobs:
   lint-report:
     name: Lint report
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -27,7 +27,7 @@ jobs:
 
   static-analysis:
     name: Static analysis
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -39,7 +39,7 @@ jobs:
 
   unit-tests-with-coverage:
     name: Unit tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -51,7 +51,7 @@ jobs:
 
   integration-test-v0:
     name: Integration tests for v0
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -82,7 +82,7 @@ jobs:
   
   integration-test-v1:
     name: Integration tests for v1
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -114,7 +114,7 @@ jobs:
   publish-charm:
     name: Publish Charm
     needs: [integration-test-v0, integration-test-v1]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ github.ref_name == 'main' }}
     steps:
       - name: Checkout
@@ -132,7 +132,7 @@ jobs:
           channel: "${{ steps.channel.outputs.name }}"
 
   publish-lib:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     name: Charmhub upload lib
     needs:
       - publish-charm

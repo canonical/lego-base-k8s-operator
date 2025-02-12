@@ -14,7 +14,7 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     CertificateSigningRequest,
     ProviderCertificate,
-    RequirerCSR,
+    RequirerCertificateRequest,
 )
 from ops import testing
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
@@ -190,9 +190,10 @@ class TestCharmV0(unittest.TestCase):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
         mock_get_outstanding_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                is_ca=False,
             )
         ]
 
@@ -235,9 +236,10 @@ class TestCharmV0(unittest.TestCase):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
         mock_get_outstanding_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                is_ca=False,
             )
         ]
         self.harness.set_can_connect("lego", True)
@@ -323,15 +325,17 @@ class TestCharmV0(unittest.TestCase):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
         mock_get_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                is_ca=False,
             )
         ]
         mock_get_outstanding_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                is_ca=False,
             )
         ]
         self.harness.set_can_connect("lego", True)
@@ -472,9 +476,10 @@ class TestCharmV0(unittest.TestCase):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
         mock_get_outstanding_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                is_ca=False,
             )
         ]
         self.harness.set_can_connect("lego", True)
@@ -524,9 +529,10 @@ class TestCharmV0(unittest.TestCase):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
         mock_get_outstanding_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                is_ca=False,
             )
         ]
         self.harness.set_can_connect("lego", True)
@@ -586,9 +592,10 @@ class TestCharmV0(unittest.TestCase):
         private_key = generate_private_key()
         csr = generate_csr(private_key, "foo.com")
         mock_get_outstanding_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=relation_id,
                 certificate_signing_request=CertificateSigningRequest.from_string(csr),
+                is_ca=False,
             )
         ]
         self.harness.set_can_connect("lego", True)

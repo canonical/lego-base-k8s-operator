@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
+from datetime import timedelta
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
@@ -9,7 +10,7 @@ import pytest
 from charms.lego_base_k8s.v1.lego_client import AcmeClient
 from charms.tls_certificates_interface.v4.tls_certificates import (
     ProviderCertificate,
-    RequirerCSR,
+    RequirerCertificateRequest,
     generate_ca,
     generate_certificate,
     generate_csr,
@@ -177,18 +178,20 @@ class TestCharmV1:
         csr_2 = generate_csr(csr_pk_2, "bar.com")
 
         issuer_pk = generate_private_key()
-        issuer = generate_ca(issuer_pk, common_name="ca", validity=365)
-        cert = generate_certificate(csr_1, issuer, issuer_pk, 365)
+        issuer = generate_ca(issuer_pk, common_name="ca", validity=timedelta(days=365))
+        cert = generate_certificate(csr_1, issuer, issuer_pk, timedelta(days=365))
         chain = [cert, issuer]
 
         mock_get_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=1,
                 certificate_signing_request=csr_1,
+                is_ca=False,
             ),
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=1,
                 certificate_signing_request=csr_2,
+                is_ca=False,
             ),
         ]
         mock_get_provider_certificates.return_value = [
@@ -231,12 +234,12 @@ class TestCharmV1:
         csr_pk = generate_private_key()
         csr = generate_csr(csr_pk, "foo.com")
         issuer_pk = generate_private_key()
-        issuer = generate_ca(issuer_pk, common_name="ca", validity=365)
-        cert = generate_certificate(csr, issuer, issuer_pk, validity=365)
+        issuer = generate_ca(issuer_pk, common_name="ca", validity=timedelta(days=365))
+        cert = generate_certificate(csr, issuer, issuer_pk, validity=timedelta(days=365))
         chain = [cert, issuer]
 
         mock_get_outstanding_certificate_requests.return_value = [
-            RequirerCSR(relation_id=1, certificate_signing_request=csr)
+            RequirerCertificateRequest(relation_id=1, certificate_signing_request=csr, is_ca=False)
         ]
 
         mock_pylego.return_value = LEGOResponse(
@@ -284,7 +287,7 @@ class TestCharmV1:
         csr = generate_csr(csr_pk, "foo.com")
 
         mock_get_certificate_requests.return_value = [
-            RequirerCSR(relation_id=1, certificate_signing_request=csr)
+            RequirerCertificateRequest(relation_id=1, certificate_signing_request=csr, is_ca=False)
         ]
 
         mock_pylego.side_effect = LEGOError("its bad")
@@ -324,13 +327,14 @@ class TestCharmV1:
         csr_pk = generate_private_key()
         csr = generate_csr(csr_pk, "foo.com")
         issuer_pk = generate_private_key()
-        issuer = generate_ca(issuer_pk, common_name="ca", validity=365)
-        cert = generate_certificate(csr, issuer, issuer_pk, 365)
+        issuer = generate_ca(issuer_pk, common_name="ca", validity=timedelta(days=365))
+        cert = generate_certificate(csr, issuer, issuer_pk, timedelta(days=365))
 
         mock_get_certificate_requests.return_value = [
-            RequirerCSR(
+            RequirerCertificateRequest(
                 relation_id=1,
                 certificate_signing_request=csr,
+                is_ca=False,
             )
         ]
 
@@ -399,8 +403,8 @@ class TestCharmV1:
         csr = generate_csr(private_key, "foo.com")
 
         server_private_key = generate_private_key()
-        ca = generate_ca(server_private_key, 365, "ca.com")
-        certificate = generate_certificate(csr, ca, server_private_key, 365)
+        ca = generate_ca(server_private_key, timedelta(days=365), "ca.com")
+        certificate = generate_certificate(csr, ca, server_private_key, timedelta(days=365))
 
         mock_get_provider_certificates.return_value = [
             ProviderCertificate(

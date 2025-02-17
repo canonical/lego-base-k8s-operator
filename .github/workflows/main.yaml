@@ -94,6 +94,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup LXD
+        uses: canonical/setup-lxd@main
+        with:
+          channel: 5.21/stable
       - name: Install charmcraft
         run: sudo snap install charmcraft --classic
       - name: Select Charmhub channel
@@ -105,6 +109,7 @@ jobs:
           credentials: "${{ secrets.CHARMCRAFT_AUTH }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
           channel: "${{ steps.channel.outputs.name }}"
+          destructive-mode: "false"
 
   publish-lib:
     runs-on: ubuntu-24.04

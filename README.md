@@ -1,4 +1,5 @@
 # LEGO Base Operator (K8s)
+![CI Status](https://github.com/canonical/lego-base-k8s-operator/actions/workflows/main.yaml/badge.svg)
 [![CharmHub Badge](https://charmhub.io/lego-base-k8s/badge.svg)](https://charmhub.io/lego-base-k8s)
 
 LEGO Base Operator is a placeholder charm that contains the `lego_client` library.

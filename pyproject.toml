@@ -9,7 +9,7 @@ dependencies = [
     "jsonschema",
     "ops",
     "pylego",
-    "rpds-py==0.22.3",
+    "rpds-py==0.23.1",
 ]
 
 [dependency-groups]

@@ -1,6 +1,6 @@
 ## Deprecation Notice
 
-**This charm is no longer supported, please consider using [lego-operator](https://github.com/canonical/lego-operator) or [notary-k8s-operator](https://github.com/canonical/notary-k8s-operator) instead.**
+**This charm is no longer supported, please use [lego-operator](https://github.com/canonical/lego-operator) instead.**
 
 # LEGO Base Operator (K8s)
 

@@ -1,4 +1,9 @@
+## Deprecation Notice
+
+**This charm is no longer supported, please consider using [lego-operator](https://github.com/canonical/lego-operator) or [notary-k8s-operator](https://github.com/canonical/notary-k8s-operator) instead.**
+
 # LEGO Base Operator (K8s)
+
 ![CI Status](https://github.com/canonical/lego-base-k8s-operator/actions/workflows/main.yaml/badge.svg)
 [![CharmHub Badge](https://charmhub.io/lego-base-k8s/badge.svg)](https://charmhub.io/lego-base-k8s)
 
@@ -13,9 +18,12 @@ While it is possible to deploy this charm, it is essentially a no-op, and not wh
 The charm should be used to access the `lego_client` library.
 
 To get started using the library, you need to fetch the library using `charmcraft`.
+
 ```shell
 charmcraft fetch-lib charms.lego_base_k8s.v0.lego_client
 ```
+
 You will also need to add the following library to the charm's dependencies:
+
 - jsonschema
 - cryptography

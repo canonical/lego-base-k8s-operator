@@ -3,7 +3,7 @@
 
 """# lego_client Library.
 
-Deprication Notice: This library is deprecated. Please use lego-operator instead.
+Deprecation Notice: This library is deprecated. Please use the lego charm instead: https://charmhub.io/lego.
 
 This library is designed to enable developers to easily create new charms for the ACME protocol.
 This library contains all the logic necessary to get certificates from an ACME server.

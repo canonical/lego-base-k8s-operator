@@ -3,7 +3,7 @@
 
 """# lego_client Library.
 
-Deprication Notice: This library is deprecated. Please use lego-operator instead.
+Deprecation Notice: This library is deprecated. Please use the lego charm instead.
 
 
 This library helps user create charms that use LEGO, a letsencrypt client, to provide

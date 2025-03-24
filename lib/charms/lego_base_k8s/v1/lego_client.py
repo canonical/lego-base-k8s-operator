@@ -187,7 +187,7 @@ class AcmeClient(CharmBase):
 
     def __init__(self, *args: Any, plugin: str):
         super().__init__(*args)
-        logger.warning("This library is deprecated. Please use lego-operator instead.")
+        logger.warning("This library is deprecated. Please use the lego charm instead.")
         self._logging = LogForwarder(self, relation_name="logging")
         self.tls_certificates = TLSCertificatesProvidesV4(self, CERTIFICATES_RELATION_NAME)
         self.cert_transfer = CertificateTransferProvides(self, CA_TRANSFER_RELATION_NAME)

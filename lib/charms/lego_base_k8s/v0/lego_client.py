@@ -124,7 +124,7 @@ class AcmeClient(CharmBase):
 
     def __init__(self, *args: Any, plugin: str):
         super().__init__(*args)
-        logger.warning("This library is deprecated. Please use lego-operator instead.")
+        logger.warning("This library is deprecated. Please use the lego charm instead.")
         self._csr_path = "/tmp/csr.pem"
         self._certs_path = "/tmp/.lego/certificates/"
         self._container_name = list(self.meta.containers.values())[0].name

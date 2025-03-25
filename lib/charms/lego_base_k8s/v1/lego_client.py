@@ -3,6 +3,9 @@
 
 """# lego_client Library.
 
+Deprecation Notice: This library is deprecated. Please use the lego charm instead.
+
+
 This library helps user create charms that use LEGO, a letsencrypt client, to provide
 certificates to other charms in the charm ecosystem. The certificate requesting functionality
 and the distribution of issued certificates are all done by the Charm class that's provided
@@ -165,7 +168,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
@@ -184,6 +187,7 @@ class AcmeClient(CharmBase):
 
     def __init__(self, *args: Any, plugin: str):
         super().__init__(*args)
+        logger.warning("This library is deprecated. Please use the lego charm instead.")
         self._logging = LogForwarder(self, relation_name="logging")
         self.tls_certificates = TLSCertificatesProvidesV4(self, CERTIFICATES_RELATION_NAME)
         self.cert_transfer = CertificateTransferProvides(self, CA_TRANSFER_RELATION_NAME)
